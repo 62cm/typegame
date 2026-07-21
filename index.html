@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>不可转头 · 打字求生</title>
+    <style>
+      :root {
+        --bg: #070708;
+        --panel: #121214;
+        --text: #e6e2da;
+        --muted: #8a857c;
+        --danger: #c23b3b;
+        --ok: #6a9e6a;
+        --caret: #e6e2da;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      #stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+      #topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 18px;
+        border-bottom: 1px solid #222;
+        background: #0c0c0e;
+        z-index: 5;
+      }
+      #topbar .stat {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      #topbar .stat b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      #topbar .danger b {
+        color: var(--danger);
+      }
+      #viewport {
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient(ellipse at 50% 40%, #141416 0%, #070708 70%);
+      }
+      #ghost-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .ghost {
+        position: absolute;
+        left: 50%;
+        top: 42%;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.15s linear;
+        filter: blur(0px);
+        will-change: transform, opacity, filter;
+      }
+      .ghost svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      #vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 35%,
+          rgba(0, 0, 0, 0.55) 100%
+        );
+        z-index: 2;
+      }
+      #threat-flash {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: rgba(140, 20, 20, 0);
+        z-index: 3;
+        transition: background 0.08s linear;
+      }
+      #lock-note {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        z-index: 4;
+      }
+      #type-panel {
+        padding: 16px 18px 22px;
+        background: var(--panel);
+        border-top: 1px solid #222;
+        z-index: 5;
+      }
+      #prompt-label,
+      #typed-label {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 4px;
+        letter-spacing: 0.06em;
+      }
+      #prompt {
+        font-size: 20px;
+        line-height: 1.55;
+        letter-spacing: 0.02em;
+        word-break: break-word;
+        min-height: 2.6em;
+        margin-bottom: 12px;
+        font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      }
+      #prompt .done {
+        color: var(--ok);
+      }
+      #prompt .current {
+        background: #2a2a22;
+        color: #fff8e7;
+        outline: 1px solid #5a5340;
+      }
+      #prompt .todo {
+        color: var(--muted);
+      }
+      #typed-box {
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        min-height: 2.4em;
+        background: #0a0a0c;
+        border: 1px solid #2a2a2e;
+        font-size: 18px;
+        line-height: 1.5;
+        word-break: break-word;
+        font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      }
+      #typed-box .ok {
+        color: var(--ok);
+      }
+      #typed-box .bad {
+        color: #ff8a8a;
+        text-decoration: underline;
+      }
+      #typed-box .composing {
+        color: #d4c48a;
+        border-bottom: 1px dashed #8a7a40;
+      }
+      #typed-box .placeholder {
+        color: #555;
+      }
+      #type-input {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        font-size: 18px;
+        line-height: 1.4;
+        color: var(--text);
+        background: #0e0e10;
+        border: 1px solid #3a3a40;
+        outline: none;
+        font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif;
+      }
+      #type-input:focus {
+        border-color: #8a3030;
+      }
+      #meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #timer-bar {
+        margin-top: 10px;
+        height: 4px;
+        background: #222;
+        overflow: hidden;
+      }
+      #timer-fill {
+        height: 100%;
+        width: 100%;
+        background: var(--danger);
+        transform-origin: left center;
+      }
+      #overlay,
+      #gameover,
+      #clear {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.82);
+        display: grid;
+        place-items: center;
+        z-index: 20;
+      }
+      #overlay.hidden,
+      #gameover.hidden,
+      #clear.hidden {
+        display: none;
+      }
+      .card {
+        width: min(460px, calc(100vw - 32px));
+        background: #101012;
+        border: 1px solid #2a2a2e;
+        padding: 24px;
+      }
+      .card h1,
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 24px;
+        font-weight: 650;
+      }
+      .card p {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      button {
+        appearance: none;
+        border: 1px solid #3a3a40;
+        background: #1c1c22;
+        color: var(--text);
+        padding: 9px 14px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: #666;
+      }
+      button.primary {
+        background: #2a1818;
+        border-color: #8a3030;
+      }
+      #shake {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="overlay">
+      <div class="card">
+        <h1>不可转头</h1>
+        <p>
+          屏幕正前方有东西。你不能回头——视角锁死。在时限内打完段落，可以逼退或消灭一只鬼。
+          打错字，它会靠近，或者再来一只。
+        </p>
+        <p>支持中文输入法。下方输入框打字，已输入内容会实时显示。</p>
+        <button class="primary" id="btn-start" type="button">面对它</button>
+      </div>
+    </div>
+
+    <div id="gameover" class="hidden">
+      <div class="card">
+        <h2>它碰到你了</h2>
+        <p id="go-msg">段落没打完。</p>
+        <button class="primary" id="btn-retry" type="button">再来一次</button>
+      </div>
+    </div>
+
+    <div id="clear" class="hidden">
+      <div class="card">
+        <h2>暂时安全</h2>
+        <p>你清空了视野里的鬼。还可以继续下一波。</p>
+        <button class="primary" id="btn-next" type="button">继续</button>
+      </div>
+    </div>
+
+    <div id="shake">
+      <div id="stage">
+        <div id="topbar">
+          <div class="stat">波次 <b id="wave">1</b></div>
+          <div class="stat">完成段落 <b id="cleared">0</b></div>
+          <div class="stat danger">鬼 <b id="ghost-count">1</b></div>
+          <div class="stat danger">距离 <b id="proximity">远</b></div>
+        </div>
+
+        <div id="viewport">
+          <div id="ghost-layer"></div>
+          <div id="vignette"></div>
+          <div id="threat-flash"></div>
+          <div id="lock-note">视角已锁定 · 不准转头</div>
+        </div>
+
+        <div id="type-panel">
+          <div id="prompt-label">目标段落</div>
+          <div id="prompt" aria-live="polite"></div>
+          <div id="typed-label">你打出来的字</div>
+          <div id="typed-box"><span class="placeholder">在下面输入…</span></div>
+          <input
+            id="type-input"
+            type="text"
+            lang="zh-CN"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="在这里用中文输入法打字"
+          />
+          <div id="meta">
+            <span>进度 <b id="progress">0%</b></span>
+            <span>剩余 <b id="time-left">0.0</b>s</span>
+            <span>连击正确 <b id="streak">0</b></span>
+          </div>
+          <div id="timer-bar"><div id="timer-fill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const PARAS = [
+        "别回头。灯在抖，走廊尽头有人站着，可你明明锁了门。",
+        "键盘是唯一还听你话的东西。打完这段，它就会退一步。",
+        "呼吸声越来越近。不要看屏幕边缘，盯着字，一个一个敲下去。",
+        "你听过那种擦玻璃的声音吗？从内侧。从你背后。但你不能转头。",
+        "名字被反复叫了三次。第四次你不该回答，你该打完这些字。",
+        "影子比人先到。打错一个字母，影子就浓一分。",
+        "计时器比心跳还快。段落结束时，至少会少一张脸。",
+        "它只会在屏幕上出现。这是安慰，也是诅咒。你的脖子不许动。",
+        "地板在响，像有人用指甲量你的距离。继续打，别停。",
+        "有人在你耳边数数。你要数的是字母，不是脚步。",
+        "窗外没有风，窗帘却动了。字打完之前，假装那是错觉。",
+        "你越害怕，手指越滑。冷静。正确比速度更能救你。",
+      ];
+
+      const els = {
+        overlay: document.getElementById("overlay"),
+        gameover: document.getElementById("gameover"),
+        clear: document.getElementById("clear"),
+        prompt: document.getElementById("prompt"),
+        typedBox: document.getElementById("typed-box"),
+        typeInput: document.getElementById("type-input"),
+        wave: document.getElementById("wave"),
+        cleared: document.getElementById("cleared"),
+        ghostCount: document.getElementById("ghost-count"),
+        proximity: document.getElementById("proximity"),
+        progress: document.getElementById("progress"),
+        timeLeft: document.getElementById("time-left"),
+        streak: document.getElementById("streak"),
+        timerFill: document.getElementById("timer-fill"),
+        ghostLayer: document.getElementById("ghost-layer"),
+        flash: document.getElementById("threat-flash"),
+        shake: document.getElementById("shake"),
+        goMsg: document.getElementById("go-msg"),
+      };
+
+      const state = {
+        running: false,
+        wave: 1,
+        cleared: 0,
+        text: "",
+        index: 0,
+        typed: "",
+        composing: "",
+        ghosts: 1,
+        near: 0.18,
+        time: 0,
+        timeMax: 0,
+        streak: 0,
+        wrongFlash: 0,
+        imeComposing: false,
+        lastJudged: "",
+      };
+
+      function ghostSvg(seed) {
+        // simple silhouette; seed shifts eyes
+        const eyeY = 70 + (seed % 5);
+        return `
+          <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="230" rx="70" ry="18" fill="rgba(0,0,0,0.45)"/>
+            <path d="M40 90 Q40 20 100 18 Q160 20 160 90 L168 210 Q140 185 100 210 Q60 185 32 210 Z"
+              fill="rgba(210,210,210,0.14)" stroke="rgba(220,220,220,0.35)" stroke-width="2"/>
+            <circle cx="78" cy="${eyeY}" r="6" fill="rgba(200,40,40,0.85)"/>
+            <circle cx="122" cy="${eyeY}" r="6" fill="rgba(200,40,40,0.85)"/>
+            <path d="M85 120 Q100 135 115 120" fill="none" stroke="rgba(180,180,180,0.35)" stroke-width="2"/>
+          </svg>`;
+      }
+
+      function renderGhosts() {
+        els.ghostLayer.innerHTML = "";
+        const n = state.ghosts;
+        for (let i = 0; i < n; i++) {
+          const g = document.createElement("div");
+          g.className = "ghost";
+          // spread slightly when multiple
+          const offsetX = (i - (n - 1) / 2) * (28 + state.near * 20);
+          const scale = 0.35 + state.near * 2.4 + i * 0.04;
+          const opacity = Math.min(0.95, 0.12 + state.near * 0.85);
+          const blur = Math.max(0, 4 - state.near * 6);
+          g.style.width = `${Math.min(520, 140 + scale * 160)}px`;
+          g.style.transform = `translate(calc(-50% + ${offsetX}px), -50%) scale(${scale})`;
+          g.style.opacity = String(opacity);
+          g.style.filter = `blur(${blur}px)`;
+          g.innerHTML = ghostSvg(i + state.wave);
+          els.ghostLayer.appendChild(g);
+        }
+      }
+
+      function proximityLabel(n) {
+        if (n < 0.25) return "远";
+        if (n < 0.45) return "可见";
+        if (n < 0.65) return "靠近";
+        if (n < 0.85) return "很近";
+        return "贴脸";
+      }
+
+      function pickText() {
+        const base = PARAS[(state.wave + state.cleared) % PARAS.length];
+        // slightly longer as waves grow
+        if (state.wave >= 4) return base + "快一点。";
+        return base;
+      }
+
+      function timeFor(text) {
+        // Chinese IME is slower than raw latin keys
+        const cps = Math.max(1.3, 1.9 - state.wave * 0.08);
+        return Math.min(70, Math.max(18, text.length / cps + 4));
+      }
+
+      function renderPrompt() {
+        const t = state.text;
+        const i = state.index;
+        let html = "";
+        for (let k = 0; k < t.length; k++) {
+          if (k < i) html += `<span class="done">${escapeHtml(t[k])}</span>`;
+          else if (k === i) html += `<span class="current">${escapeHtml(t[k])}</span>`;
+          else html += `<span class="todo">${escapeHtml(t[k])}</span>`;
+        }
+        els.prompt.innerHTML = html;
+      }
+
+      function renderTyped(extraWrong = "") {
+        if (!state.typed && !state.composing && !extraWrong) {
+          els.typedBox.innerHTML = `<span class="placeholder">在下面输入…</span>`;
+          return;
+        }
+        let html = `<span class="ok">${escapeHtml(state.typed)}</span>`;
+        if (extraWrong) html += `<span class="bad">${escapeHtml(extraWrong)}</span>`;
+        if (state.composing) html += `<span class="composing">${escapeHtml(state.composing)}</span>`;
+        els.typedBox.innerHTML = html;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function focusInput() {
+        // keep IME usable
+        requestAnimationFrame(() => {
+          els.typeInput.focus();
+        });
+      }
+
+      function commonPrefixLen(a, b) {
+        const n = Math.min(a.length, b.length);
+        let i = 0;
+        while (i < n && a[i] === b[i]) i++;
+        return i;
+      }
+
+      /** Judge committed input (after IME composition). */
+      function judgeCommitted(raw) {
+        if (!state.running) return;
+        const target = state.text;
+        // only allow typing up to target length + a bit of wrong tail
+        let value = raw;
+
+        const prefix = commonPrefixLen(value, target);
+        const correct = target.slice(0, prefix);
+        const wrongTail = value.slice(prefix);
+
+        if (wrongTail.length > 0) {
+          // punish once per wrong commit burst
+          if (value !== state.lastJudged) {
+            onWrong();
+            state.lastJudged = value;
+          }
+          // snap input back to correct prefix so player can continue
+          state.typed = correct;
+          state.index = prefix;
+          els.typeInput.value = correct;
+          renderTyped(wrongTail.slice(0, 8));
+          renderPrompt();
+          syncHud();
+          return;
+        }
+
+        const gained = prefix - state.index;
+        if (gained > 0) {
+          state.streak += gained;
+          if (state.streak >= 8) {
+            state.near = Math.max(0.08, state.near - 0.03 * Math.floor(state.streak / 8));
+            state.streak = state.streak % 8;
+          }
+        }
+        state.typed = correct;
+        state.index = prefix;
+        state.lastJudged = correct;
+        renderTyped();
+        renderPrompt();
+        syncHud();
+
+        if (state.index >= target.length) {
+          els.typeInput.value = "";
+          completeParagraph();
+        }
+      }
+
+      function syncHud() {
+        els.wave.textContent = String(state.wave);
+        els.cleared.textContent = String(state.cleared);
+        els.ghostCount.textContent = String(state.ghosts);
+        els.proximity.textContent = proximityLabel(state.near);
+        els.progress.textContent =
+          Math.floor((state.index / Math.max(1, state.text.length)) * 100) + "%";
+        els.timeLeft.textContent = state.time.toFixed(1);
+        els.streak.textContent = String(state.streak);
+        els.timerFill.style.transform = `scaleX(${Math.max(0, state.time / state.timeMax)})`;
+        renderGhosts();
+
+        const shake = state.near > 0.7 ? (state.near - 0.7) * 14 : 0;
+        els.shake.style.transform =
+          shake > 0
+            ? `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)`
+            : "none";
+        els.flash.style.background =
+          state.wrongFlash > 0
+            ? `rgba(140, 20, 20, ${Math.min(0.35, state.wrongFlash)})`
+            : state.near > 0.8
+              ? `rgba(80, 0, 0, ${(state.near - 0.8) * 0.9})`
+              : "rgba(140, 20, 20, 0)";
+      }
+
+      function startParagraph() {
+        state.text = pickText();
+        state.index = 0;
+        state.typed = "";
+        state.composing = "";
+        state.lastJudged = "";
+        state.timeMax = timeFor(state.text);
+        state.time = state.timeMax;
+        state.streak = 0;
+        els.typeInput.value = "";
+        els.typeInput.disabled = false;
+        renderPrompt();
+        renderTyped();
+        syncHud();
+        focusInput();
+      }
+
+      function startGame() {
+        state.running = true;
+        state.wave = 1;
+        state.cleared = 0;
+        state.ghosts = 1;
+        state.near = 0.16;
+        els.overlay.classList.add("hidden");
+        els.gameover.classList.add("hidden");
+        els.clear.classList.add("hidden");
+        startParagraph();
+      }
+
+      function fail(reason) {
+        state.running = false;
+        els.typeInput.disabled = true;
+        els.goMsg.textContent = reason;
+        els.gameover.classList.remove("hidden");
+        syncHud();
+      }
+
+      function onWrong() {
+        state.streak = 0;
+        state.wrongFlash = 0.45;
+        if (state.ghosts < 5 && Math.random() < 0.35 + state.wave * 0.03) {
+          state.ghosts += 1;
+          state.near = Math.min(0.98, state.near + 0.06);
+        } else {
+          state.near = Math.min(0.98, state.near + 0.1 + state.wave * 0.01);
+        }
+        if (state.near >= 1) fail("打错太多，它贴到了屏幕上。");
+      }
+
+      function completeParagraph() {
+        state.cleared++;
+        state.typed = "";
+        state.composing = "";
+        if (state.ghosts > 1) {
+          state.ghosts -= 1;
+          state.near = Math.max(0.1, state.near - 0.22);
+        } else {
+          state.near = Math.max(0.06, state.near - 0.35);
+          if (state.near < 0.12) {
+            state.running = false;
+            els.typeInput.disabled = true;
+            els.clear.classList.remove("hidden");
+            syncHud();
+            return;
+          }
+        }
+        startParagraph();
+      }
+
+      function nextWave() {
+        state.wave += 1;
+        state.ghosts = Math.min(5, 1 + Math.floor(state.wave / 2));
+        state.near = Math.min(0.35, 0.14 + state.wave * 0.02);
+        state.running = true;
+        els.clear.classList.add("hidden");
+        startParagraph();
+      }
+
+      // IME-friendly input path (Chinese pinyin etc.)
+      els.typeInput.addEventListener("compositionstart", () => {
+        state.imeComposing = true;
+      });
+      els.typeInput.addEventListener("compositionupdate", (e) => {
+        state.composing = e.data || "";
+        renderTyped();
+      });
+      els.typeInput.addEventListener("compositionend", (e) => {
+        state.imeComposing = false;
+        state.composing = "";
+        judgeCommitted(e.target.value);
+        focusInput();
+      });
+      els.typeInput.addEventListener("input", (e) => {
+        if (state.imeComposing || e.isComposing) {
+          // show composing buffer from input value beyond committed typed
+          const v = e.target.value;
+          if (v.startsWith(state.typed)) {
+            state.composing = v.slice(state.typed.length);
+          } else {
+            state.composing = v;
+          }
+          renderTyped();
+          return;
+        }
+        state.composing = "";
+        judgeCommitted(e.target.value);
+      });
+
+      // click anywhere in type panel refocuses for IME
+      document.getElementById("type-panel").addEventListener("mousedown", (e) => {
+        if (e.target !== els.typeInput && state.running) {
+          e.preventDefault();
+          focusInput();
+        }
+      });
+
+      let last = performance.now();
+      function tick(now) {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        if (state.running) {
+          state.time -= dt;
+          // passive approach while time bleeds
+          state.near = Math.min(1, state.near + dt * (0.012 + state.ghosts * 0.004 + state.wave * 0.0015));
+          if (state.wrongFlash > 0) state.wrongFlash = Math.max(0, state.wrongFlash - dt * 1.8);
+          if (state.time <= 0) {
+            state.time = 0;
+            state.near = Math.min(1, state.near + 0.2);
+            if (state.near >= 1) fail("时间到了。它走到了面前。");
+            else {
+              // overtime punishment: spawn / approach, soft reset timer slice
+              if (state.ghosts < 5) state.ghosts += 1;
+              state.time = Math.max(6, state.timeMax * 0.35);
+            }
+          }
+          if (state.near >= 1) fail("它碰到你了。");
+          syncHud();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      document.getElementById("btn-start").onclick = startGame;
+      document.getElementById("btn-retry").onclick = startGame;
+      document.getElementById("btn-next").onclick = nextWave;
+
+      renderGhosts();
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>
