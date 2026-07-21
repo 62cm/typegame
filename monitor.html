@@ -601,10 +601,12 @@
         <div class="mode-row" id="mode-row">
           <button type="button" data-mode="classic" class="active">经典打字</button>
           <button type="button" data-mode="story">剧情模式</button>
+          <a href="cold.html" style="flex:1;min-width:90px;text-align:center;padding:9px 8px;border:1px solid #3a3a40;background:#1a2228;color:#c8d8e0;text-decoration:none;font-size:14px">感冒模式</a>
         </div>
         <ul class="rules">
           <li><b>经典</b>：涂黑 / 打叉（必须填字但不能填原字，用别的字覆盖）/ 红键封锁陷阱。</li>
           <li><b>剧情</b>：鬼讲生平喜恶，后面必须原样打出她说过的内容。</li>
+          <li><b>感冒</b>：另页 · 手机全键盘咳嗽溅唾液打报告（无九宫）。</li>
           <li><b>二周目</b>：通关后每打对一字，文末涂黑一字。</li>
         </ul>
         <button class="primary" id="btn-start" type="button">坐下，别回头</button>
@@ -692,6 +694,7 @@
     </div>
 
     <a id="switch-ver" href="index.html">卡通版</a>
+    <a id="switch-ver" href="cold.html" style="right: 100px">感冒模式</a>
 
     <script type="module">
       import { createGameController, loadMeta } from "./mechanics.js";
@@ -778,7 +781,9 @@
       });
 
       const saved = loadMeta();
-      game.setMode(saved.mode || "classic");
+      // 真人版不做九宫
+      const startMode = saved.mode === "story" ? "story" : "classic";
+      game.setMode(startMode);
       document.querySelectorAll("#mode-row button").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.mode === game.state.mode);
         btn.onclick = () => {

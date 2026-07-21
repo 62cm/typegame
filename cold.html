@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>感冒模式 · 老板要报告</title>
+    <style>
+      :root {
+        --phone: #1a1c22;
+        --bezel: #0e0f12;
+        --screen: #f2efe8;
+        --ink: #1c1a17;
+        --muted: #6a655c;
+        --accent: #2a6f8f;
+        --danger: #b04040;
+        --ok: #3a7a4a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: radial-gradient(ellipse at 50% 20%, #2a3038 0%, #0a0b0d 70%);
+        color: var(--ink);
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      #nav {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #nav a {
+        padding: 8px 12px;
+        background: #1c1c22;
+        border: 1px solid #444;
+        color: #ddd;
+        text-decoration: none;
+        font-size: 12px;
+      }
+      .phone {
+        width: min(420px, 100%);
+        background: var(--bezel);
+        border-radius: 28px;
+        padding: 12px 10px 18px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
+      }
+      .notch {
+        width: 38%;
+        height: 18px;
+        margin: 0 auto 8px;
+        background: #050506;
+        border-radius: 0 0 12px 12px;
+      }
+      .screen {
+        background: var(--screen);
+        border-radius: 18px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 720px;
+        max-height: min(86vh, 860px);
+      }
+      .status {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 12px 4px;
+        font-size: 11px;
+        color: var(--muted);
+        background: #e8e4db;
+      }
+      .status b {
+        color: var(--ink);
+      }
+      .pay-tiers {
+        display: flex;
+        gap: 4px;
+        padding: 0 10px 6px;
+        background: #e8e4db;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .pay-tiers span {
+        flex: 1;
+        text-align: center;
+        padding: 3px 2px;
+        border: 1px solid #d0cbc0;
+        border-radius: 4px;
+        background: #f7f4ee;
+      }
+      .pay-tiers span.on {
+        border-color: var(--ok);
+        color: var(--ok);
+        font-weight: 600;
+      }
+
+      /* 领导口述区 */
+      .dictation {
+        position: relative;
+        padding: 10px 12px 8px;
+        background: linear-gradient(180deg, #dfe8ef 0%, #eef2f5 100%);
+        border-bottom: 1px solid #c9d3dc;
+        min-height: 120px;
+      }
+      .mic-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .mic {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid #4a7a94;
+        background: radial-gradient(circle at 40% 35%, #9ec9e0, #3a6a82);
+        cursor: pointer;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        box-shadow: 0 2px 0 #2a4a5a;
+        user-select: none;
+      }
+      .mic:active {
+        transform: translateY(1px);
+      }
+      .mic.pulse {
+        animation: pulse 0.9s ease infinite;
+      }
+      @keyframes pulse {
+        50% {
+          box-shadow: 0 0 0 8px rgba(60, 120, 160, 0.2);
+        }
+      }
+      .bubbles {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 96px;
+        overflow-y: auto;
+      }
+      .bubble {
+        align-self: flex-start;
+        max-width: 95%;
+        padding: 6px 10px;
+        background: #fff;
+        border: 1px solid #c5d0d8;
+        border-radius: 12px 12px 12px 4px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: #243038;
+      }
+      .bubble.sys {
+        background: #f0f4f7;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .reveal-line {
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #2a3340;
+        word-break: break-word;
+        min-height: 2.8em;
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .reveal-line .ghost {
+        color: #b8c0c8;
+      }
+      .reveal-line .next {
+        background: #ffe08a;
+        outline: 1px solid #d0a820;
+      }
+
+      /* 全键盘 */
+      .kb-wrap {
+        padding: 8px 6px 4px;
+        background: #ddd6c8;
+        border-bottom: 1px solid #c8c0b0;
+      }
+      .kb-hint {
+        font-size: 10px;
+        color: var(--muted);
+        text-align: center;
+        margin-bottom: 6px;
+      }
+      .kb {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+      }
+      .kb-row {
+        display: flex;
+        gap: 3px;
+        justify-content: center;
+      }
+      .key {
+        position: relative;
+        width: 28px;
+        height: 34px;
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        background: linear-gradient(180deg, #faf8f3, #e8e2d6);
+        color: #222;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        user-select: none;
+        box-shadow: 0 1px 0 #bbb;
+      }
+      .key:active {
+        transform: translateY(1px);
+        background: #ddd;
+      }
+      .key.wide {
+        width: 48px;
+        font-size: 10px;
+      }
+      .key.space {
+        width: 140px;
+      }
+      .stain {
+        position: absolute;
+        inset: 3px;
+        border-radius: 4px;
+        pointer-events: none;
+        opacity: 0.72;
+      }
+      .stain.phlegm {
+        background: radial-gradient(circle at 40% 40%, #e0c898, #a88850);
+      }
+      .stain.snot {
+        background: linear-gradient(180deg, #b8eec8, #6ab888);
+      }
+      .stain.spit {
+        background: radial-gradient(circle, #ffffffaa, #b8d0f066);
+      }
+
+      /* 唾液工具条 */
+      .tools {
+        display: flex;
+        gap: 4px;
+        padding: 6px 8px;
+        background: #ebe4d8;
+        border-bottom: 1px solid #d0c8b8;
+      }
+      .tools button {
+        flex: 1;
+        border: 1px solid #b0a898;
+        background: #f7f2ea;
+        color: #333;
+        font-size: 11px;
+        padding: 7px 4px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .tools button.active {
+        border-color: var(--accent);
+        background: #dceaf1;
+        color: #1a4a60;
+        font-weight: 700;
+      }
+      .tools button#btn-shake {
+        flex: 0.9;
+        border-color: #a07040;
+        background: #f5e6d0;
+      }
+      .tools button#btn-shake:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      /* 下面对话框：已打内容 */
+      .compose {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        background: #f7f4ee;
+      }
+      .compose-label {
+        padding: 6px 12px 0;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .typed {
+        flex: 1;
+        margin: 4px 10px 8px;
+        padding: 10px;
+        background: #fff;
+        border: 1px solid #d4cdc0;
+        border-radius: 10px;
+        font-size: 13px;
+        line-height: 1.55;
+        overflow-y: auto;
+        word-break: break-word;
+        font-family: Georgia, "Times New Roman", serif;
+        min-height: 90px;
+      }
+      .typed .ok {
+        color: var(--ok);
+      }
+      .typed .bad {
+        color: var(--danger);
+        text-decoration: underline;
+      }
+      .typed .pending {
+        color: #bbb;
+      }
+      .typed .cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background: var(--accent);
+        vertical-align: text-bottom;
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .emit {
+        padding: 0 12px 8px;
+        font-size: 11px;
+        color: var(--muted);
+        min-height: 1.2em;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: grid;
+        place-items: center;
+        z-index: 30;
+        padding: 16px;
+      }
+      .overlay.hidden {
+        display: none;
+      }
+      .card {
+        width: min(420px, 100%);
+        background: #14161a;
+        color: #e8e4da;
+        border: 1px solid #333;
+        padding: 20px;
+        border-radius: 12px;
+      }
+      .card h1,
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+      .card p,
+      .card li {
+        margin: 0 0 8px;
+        color: #9a958a;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .card ul {
+        padding-left: 1.2em;
+        margin: 0 0 14px;
+      }
+      .card button {
+        appearance: none;
+        border: 1px solid #8a4030;
+        background: #2a1818;
+        color: #f0e8e0;
+        padding: 10px 14px;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+      .win-amt {
+        font-size: 28px;
+        color: #e8c070;
+        font-weight: 700;
+        margin: 8px 0 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="nav">
+      <a href="index.html">卡通版</a>
+      <a href="monitor.html">真人版</a>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <h1>感冒模式</h1>
+        <p>老板要学术报告。你发着烧，只能对着手机全键盘咳嗽溅唾液打字。</p>
+        <ul>
+          <li><b>浓痰</b> 30s：粘在键上可持续参与组合（痰在 B、再唾 I → BI；沾到错键也会打出，得删）。</li>
+          <li><b>鼻涕</b> 10s：沿竖列流过下面最多 3 个键。</li>
+          <li><b>唾沫星子</b> 1s：不移动。</li>
+          <li><b>甩键盘</b>清掉所有唾液，冷却 10s。</li>
+          <li>点话筒吐口水：播放领导口述并解锁下一段正文；重听也要再吐。</li>
+          <li>奖金：不限时 100 / 5 分钟内 1000 / 3 分钟内 2000。</li>
+        </ul>
+        <button type="button" id="btn-start">接电话，开打</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="win">
+      <div class="card">
+        <h2>报告交上去了</h2>
+        <p id="win-tier"></p>
+        <div class="win-amt" id="win-amt"></div>
+        <p id="win-time"></p>
+        <button type="button" id="btn-again">再咳一轮</button>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status">
+          <span>⏱ <b id="timer">0:00</b></span>
+          <span>进度 <b id="progress">0%</b></span>
+          <span>甩键 CD <b id="shake-cd">就绪</b></span>
+        </div>
+        <div class="pay-tiers">
+          <span id="tier-2000">奖金 ¥2000 · ≤3min</span>
+          <span id="tier-1000">合同 ¥1000 · ≤5min</span>
+          <span id="tier-100">辛苦 ¥100 · 不限时</span>
+        </div>
+
+        <div class="dictation">
+          <div class="mic-row">
+            <button type="button" class="mic" id="mic" title="对着话筒咳嗽以收听">咳·听</button>
+            <div class="bubbles" id="bubbles">
+              <div class="bubble sys">对着话筒吐一口，领导才肯往下说。</div>
+            </div>
+          </div>
+          <div class="reveal-line" id="reveal"></div>
+        </div>
+
+        <div class="tools">
+          <button type="button" data-saliva="phlegm" class="active">浓痰 30s</button>
+          <button type="button" data-saliva="snot">鼻涕 10s</button>
+          <button type="button" data-saliva="spit">星子 1s</button>
+          <button type="button" id="btn-shake">甩键盘</button>
+        </div>
+
+        <div class="kb-wrap">
+          <div class="kb-hint">点按键 = 把当前唾液溅上去（组合出字）</div>
+          <div class="kb" id="kb"></div>
+        </div>
+
+        <div class="compose">
+          <div class="compose-label">对话框 · 你打出来的报告</div>
+          <div class="typed" id="typed"></div>
+          <div class="emit" id="emit"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createColdGame, ROWS, SALIVA } from "./cold.js";
+
+      const els = {
+        overlay: document.getElementById("overlay"),
+        win: document.getElementById("win"),
+        timer: document.getElementById("timer"),
+        progress: document.getElementById("progress"),
+        shakeCd: document.getElementById("shake-cd"),
+        bubbles: document.getElementById("bubbles"),
+        reveal: document.getElementById("reveal"),
+        typed: document.getElementById("typed"),
+        emit: document.getElementById("emit"),
+        kb: document.getElementById("kb"),
+        mic: document.getElementById("mic"),
+        tier2000: document.getElementById("tier-2000"),
+        tier1000: document.getElementById("tier-1000"),
+        tier100: document.getElementById("tier-100"),
+        winTier: document.getElementById("win-tier"),
+        winAmt: document.getElementById("win-amt"),
+        winTime: document.getElementById("win-time"),
+      };
+
+      function fmt(t) {
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        return `${m}:${String(s).padStart(2, "0")}`;
+      }
+
+      function speak(text) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = "zh-CN";
+          u.rate = 0.85;
+          window.speechSynthesis.speak(u);
+        } catch (_) {}
+      }
+
+      function buildKeyboard(game) {
+        els.kb.innerHTML = "";
+        for (const row of ROWS) {
+          const rowEl = document.createElement("div");
+          rowEl.className = "kb-row";
+          for (const ch of row) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "key";
+            btn.dataset.key = ch;
+            btn.innerHTML = `<span>${ch}</span><i class="stain-layer"></i>`;
+            btn.addEventListener("click", () => game.coughOnKey(ch));
+            rowEl.appendChild(btn);
+          }
+          els.kb.appendChild(rowEl);
+        }
+        const util = document.createElement("div");
+        util.className = "kb-row";
+        const bk = document.createElement("button");
+        bk.type = "button";
+        bk.className = "key wide";
+        bk.textContent = "⌫";
+        bk.addEventListener("click", () => game.backspace());
+        const sp = document.createElement("button");
+        sp.type = "button";
+        sp.className = "key space";
+        sp.textContent = "space";
+        sp.addEventListener("click", () => game.space());
+        util.appendChild(bk);
+        util.appendChild(sp);
+        els.kb.appendChild(util);
+      }
+
+      function paintStains(state) {
+        const now = performance.now() / 1000;
+        els.kb.querySelectorAll(".key[data-key]").forEach((btn) => {
+          const k = btn.dataset.key;
+          const list = state.stains.get(k) || [];
+          const alive = list.filter((s) => s.until > now);
+          let layer = btn.querySelector(".stain-layer");
+          if (!layer) {
+            layer = document.createElement("i");
+            layer.className = "stain-layer";
+            btn.appendChild(layer);
+          }
+          if (!alive.length) {
+            layer.innerHTML = "";
+            return;
+          }
+          // 取剩余最久的显示
+          alive.sort((a, b) => b.until - a.until);
+          const top = alive[0];
+          layer.innerHTML = `<span class="stain ${top.type}"></span>`;
+        });
+      }
+
+      function renderTyped(state) {
+        const report = game.REPORT;
+        const typed = state.typed;
+        let html = "";
+        const n = Math.max(typed.length, report.length);
+        for (let i = 0; i < typed.length; i++) {
+          const ok = i < report.length && typed[i] === report[i];
+          html += `<span class="${ok ? "ok" : "bad"}">${escapeHtml(typed[i])}</span>`;
+        }
+        if (typed.length < report.length) {
+          html += `<span class="cursor"></span>`;
+          html += `<span class="pending">${escapeHtml(report.slice(typed.length, typed.length + 48))}</span>`;
+        }
+        els.typed.innerHTML = html || `<span class="pending">（还没咳出字）</span>`;
+        els.progress.textContent =
+          Math.min(100, Math.floor((prefixMatch(typed, report) / report.length) * 100)) + "%";
+        els.emit.textContent = state.lastEmit
+          ? `刚才溅出：${state.lastEmit.toUpperCase()}`
+          : "";
+      }
+
+      function prefixMatch(a, b) {
+        let i = 0;
+        while (i < a.length && i < b.length && a[i] === b[i]) i++;
+        return i;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll(" ", "·");
+      }
+
+      function renderReveal(state) {
+        const report = game.REPORT;
+        const unlocked = report.slice(0, state.revealedEnd);
+        const rest = report.slice(state.revealedEnd, state.revealedEnd + 40);
+        const next = unlocked.slice(-1);
+        const head = unlocked.slice(0, -1);
+        els.reveal.innerHTML =
+          `<span>${escapeHtml(head)}</span>` +
+          (next ? `<span class="next">${escapeHtml(next)}</span>` : "") +
+          (rest ? `<span class="ghost">${escapeHtml(rest)}…</span>` : "");
+      }
+
+      function updateTiers(elapsed) {
+        els.tier2000.classList.toggle("on", elapsed <= 180);
+        els.tier1000.classList.toggle("on", elapsed > 180 && elapsed <= 300);
+        els.tier100.classList.toggle("on", elapsed > 300);
+        if (elapsed <= 180) {
+          els.tier1000.classList.remove("on");
+          els.tier100.classList.remove("on");
+          els.tier2000.classList.add("on");
+        } else if (elapsed <= 300) {
+          els.tier2000.classList.remove("on");
+          els.tier100.classList.remove("on");
+          els.tier1000.classList.add("on");
+        }
+      }
+
+      const game = createColdGame({
+        onStart() {
+          els.overlay.classList.add("hidden");
+          els.win.classList.add("hidden");
+          els.bubbles.innerHTML =
+            '<div class="bubble sys">对着话筒吐一口，领导才肯往下说。</div>';
+        },
+        onTyped(state) {
+          renderTyped(state);
+        },
+        onStain(state) {
+          paintStains(state);
+        },
+        onReveal(state) {
+          renderReveal(state);
+        },
+        onVoice(line, index, replay) {
+          const b = document.createElement("div");
+          b.className = "bubble";
+          b.textContent = (replay ? "（重听）" : `口述 ${index + 1}：`) + line;
+          els.bubbles.appendChild(b);
+          els.bubbles.scrollTop = els.bubbles.scrollHeight;
+          els.mic.classList.add("pulse");
+          speak(line);
+          setTimeout(() => els.mic.classList.remove("pulse"), 1200);
+        },
+        onShake(state) {
+          els.emit.textContent = "键盘甩掉了所有口水。";
+          paintStains(state);
+        },
+        onTick(state) {
+          els.timer.textContent = fmt(state.elapsed);
+          els.shakeCd.textContent =
+            state.shakeCd > 0 ? state.shakeCd.toFixed(1) + "s" : "就绪";
+          document.getElementById("btn-shake").disabled = state.shakeCd > 0;
+          updateTiers(state.elapsed);
+        },
+        onWin(state, pay) {
+          els.win.classList.remove("hidden");
+          els.winTier.textContent = `${pay.label} · ${pay.tip}`;
+          els.winAmt.textContent = `¥ ${pay.amount}`;
+          els.winTime.textContent = `用时 ${fmt(state.elapsed)}`;
+          try {
+            window.speechSynthesis.cancel();
+          } catch (_) {}
+        },
+      });
+
+      buildKeyboard(game);
+
+      document.querySelectorAll("[data-saliva]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          game.setSalivaType(btn.dataset.saliva);
+          document.querySelectorAll("[data-saliva]").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+        });
+      });
+
+      document.getElementById("btn-shake").addEventListener("click", () => {
+        game.shakeKeyboard();
+      });
+      els.mic.addEventListener("click", () => game.spitForVoice());
+      document.getElementById("btn-start").addEventListener("click", () => game.start());
+      document.getElementById("btn-again").addEventListener("click", () => game.start());
+
+      let last = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        game.tick(dt);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
