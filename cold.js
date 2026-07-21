@@ -1,6 +1,6 @@
 /**
- * 感冒模式：只能控方向与憋气；咳嗽/喷嚏自动喷射（抛物线落键）。
- * 喷嚏才喷出青黄浓鼻涕；普通咳嗽为唾沫星子。
+ * 感冒模式：视线方向 + 力度蓄力喷射（抛物线）。
+ * 咳：唾沫星子；小喷嚏：清水鼻涕；每第 3 个喷嚏为大喷嚏：黄鼻涕。
  */
 
 import { REPORT, VOICE_LINES, charsUnlockedByVoice } from "./cold-content.js";
@@ -23,12 +23,15 @@ export function columnKeys(letter) {
   return [letter];
 }
 
-/** 落点类型 */
 export const GOO = {
-  spit: { id: "spit", name: "唾沫星子", duration: 1, color: "#d8e8ff" },
-  // 喷嚏喷出的「痰」实为青黄浓鼻涕
-  snot: { id: "snot", name: "青黄浓鼻涕", duration: 30, color: "#c8d040", drip: true },
+  spit: { id: "spit", name: "唾沫星子", duration: 1.2, color: "#d8e8ff" },
+  water: { id: "water", name: "清水鼻涕", duration: 10, color: "#a8d8f0", drip: false },
+  yellow: { id: "yellow", name: "黄鼻涕", duration: 30, color: "#d4c020", drip: true },
 };
+
+export const COUGH_PERIOD = 3;
+export const SNEEZE_PERIOD = 10;
+export const HOLD_MAX = 3;
 
 export function payTier(elapsedSec) {
   if (elapsedSec <= 180) return { label: "奖金", amount: 2000, tip: "3 分钟内完成" };
@@ -36,31 +39,53 @@ export function payTier(elapsedSec) {
   return { label: "辛苦费", amount: 100, tip: "不限时完成" };
 }
 
-/**
- * aim: -1..1 视线左右
- * hold: 是否在憋
- */
+/** 预览抛物线采样点（归一化坐标，相对 stage） */
+export function sampleArc(aim, force, scatter = 0) {
+  const mouthX = 0.5 + aim * 0.06;
+  const mouthY = 0.88;
+  const targetX = 0.5 + aim * 0.38 + scatter;
+  const targetY = 0.42 - force * 0.05;
+  const flight = 0.55;
+  const vx = (targetX - mouthX) / flight;
+  const vy0 = (targetY - mouthY) / flight - 0.9 * force;
+  const g = 2.2;
+  const pts = [];
+  for (let t = 0; t <= flight; t += 0.03) {
+    pts.push({
+      x: mouthX + vx * t,
+      y: mouthY + vy0 * t + 0.5 * g * t * t,
+    });
+  }
+  return pts;
+}
+
 export function createColdGame(ui) {
   const state = {
-    phase: "practice", // practice | play | done
+    phase: "practice",
     running: false,
     finished: false,
-    aim: 0, // -1 left .. 1 right
+    aim: 0,
     holding: false,
     holdTime: 0,
-    coughCd: 3,
-    sneezeCd: 10,
+    // 蓄力 0..1，满格才喷（最大强度）
+    coughCharge: 0,
+    sneezeCharge: 0,
+    sneezeIndex: 0, // 第几次喷嚏（1-based 用 % 3）
+    nextSneezeBig: false,
     wipeCd: 0,
-    stains: new Map(), // key -> [{type, until, id}]
-    projectiles: [], // flying droplets
+    stains: new Map(),
+    projectiles: [],
     typed: "",
     revealedEnd: 0,
     voiceIndex: 0,
     elapsed: 0,
     stainSeq: 0,
     lastEmit: "",
-    lastBurst: null, // {kind, forced, scatter, force}
+    lastBurst: null,
     practiceHits: 0,
+    // 当前预览力度（蓄力中显示）
+    previewForce: 0,
+    intensity: 0, // 最近一次喷射强度 0..1
   };
 
   let stainOrder = [];
@@ -85,63 +110,76 @@ export function createColdGame(ui) {
 
   function setHolding(on) {
     if (!state.running || state.finished) return;
-    if (on && !state.holding) {
-      state.holding = true;
-      state.holdTime = 0;
-    } else if (!on && state.holding) {
-      // 提前松手：若已憋够会在 tick 里强制喷；未满 3s 则正常释放下一次到期的喷射
+    if (on) {
+      if (!state.holding) {
+        state.holding = true;
+        state.holdTime = 0;
+      }
+    } else {
       state.holding = false;
       state.holdTime = 0;
     }
   }
 
+  function peekSneezeBig() {
+    // 每 3 个里第 3 个大喷嚏（即将喷出的是 sneezeIndex+1）
+    return (state.sneezeIndex + 1) % 3 === 0;
+  }
+
   /**
-   * 发射一波抛物线液滴
-   * kind: 'cough' | 'sneeze'
-   * forced: 憋满 3s 的大散射
+   * kind: cough | sneeze
+   * forced: 憋满爆发
    */
   function burst(kind, forced = false) {
     const isSneeze = kind === "sneeze";
-    const goo = isSneeze ? "snot" : "spit";
-    // 力度：喷嚏更强；憋满再加强
-    let force = isSneeze ? 1.35 : 0.85;
-    let scatter = isSneeze ? 0.22 : 0.1;
-    let count = isSneeze ? 7 : 4;
-    if (forced) {
-      force *= 1.55;
-      scatter *= 2.4;
-      count = Math.floor(count * 2.2);
+    let goo = "spit";
+    let big = false;
+    if (isSneeze) {
+      state.sneezeIndex += 1;
+      big = state.sneezeIndex % 3 === 0;
+      goo = big ? "yellow" : "water";
+      state.nextSneezeBig = (state.sneezeIndex + 1) % 3 === 0;
     }
 
-    state.lastBurst = { kind, forced, scatter, force, goo };
+    // 满蓄力 = 最大强度；憋满再乘散射
+    let force = 1;
+    let scatter = isSneeze ? (big ? 0.28 : 0.16) : 0.09;
+    let count = isSneeze ? (big ? 10 : 6) : 5;
+    if (forced) {
+      force = 1.35;
+      scatter *= 2.5;
+      count = Math.floor(count * 2.1);
+    }
 
-    // 归一化坐标：嘴在屏幕下方中央，键盘在上方区域
-    // x: 0..1 across phone, y: 0 top .. 1 bottom
-    const mouthX = 0.5 + state.aim * 0.08;
-    const mouthY = 0.92;
-    // 目标落点带：键盘大约在 y 0.35–0.62
-    const targetY = 0.48 - force * 0.06;
-    const targetX = 0.5 + state.aim * 0.42;
+    state.intensity = force;
+    state.previewForce = force;
+    state.lastBurst = { kind, forced, scatter, force, goo, big };
+
+    const mouthX = 0.5 + state.aim * 0.06;
+    const mouthY = 0.88;
+    const targetY = 0.4 - force * 0.04;
+    const targetX = 0.5 + state.aim * 0.38;
+    const g = 2.2;
 
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
-      const tx = Math.max(0.05, Math.min(0.95, targetX + spread));
-      const ty = targetY + (Math.random() - 0.5) * scatter * 0.35;
-      // 抛物线：初速度指向目标，带重力
-      const dx = tx - mouthX;
-      const dy = ty - mouthY;
-      const flight = 0.45 + Math.random() * 0.15;
-      const vx = dx / flight;
-      const vy = dy / flight - 0.55 * force; // 上抛分量
+      const tx = Math.max(0.06, Math.min(0.94, targetX + spread));
+      const ty = targetY + (Math.random() - 0.5) * scatter * 0.4;
+      const flight = 0.5 + Math.random() * 0.12;
+      const vx = (tx - mouthX) / flight;
+      const vy = (ty - mouthY) / flight - 0.9 * force;
       state.projectiles.push({
         x: mouthX,
         y: mouthY,
         vx,
         vy,
         goo,
-        life: 1.2,
+        life: 1.4,
         age: 0,
-        r: isSneeze ? 0.012 + Math.random() * 0.01 : 0.007 + Math.random() * 0.006,
+        g,
+        landed: false,
+        r: goo === "yellow" ? 0.014 : goo === "water" ? 0.011 : 0.008,
+        trail: [],
       });
     }
 
@@ -149,41 +187,23 @@ export function createColdGame(ui) {
   }
 
   function landOnKeys(x, y, goo) {
-    // 由 UI 提供键位矩形命中；若无则用列估算
-    const hits = ui.hitTest?.(x, y) || estimateKeys(x, y, goo);
+    let hits = ui.hitTest?.(x, y);
+    if (!hits || !hits.length) hits = estimateKeys(x, y);
     if (!hits.length) return;
 
     const now = performance.now() / 1000;
-    const dur = GOO[goo].duration;
-    const until = now + dur;
+    const def = GOO[goo] || GOO.spit;
+    const until = now + def.duration;
 
     for (const letter of hits) {
-      state.stainSeq += 1;
-      const stain = { type: goo, until, id: state.stainSeq, key: letter };
-      const list = state.stains.get(letter) || [];
-      list.push(stain);
-      state.stains.set(letter, list);
-      stainOrder.push(stain);
-
-      // 青黄浓鼻涕：同时粘竖列下两键（流淌感）
-      if (goo === "snot" && GOO.snot.drip) {
+      addStain(letter, goo, until);
+      if (def.drip) {
         for (const k of columnKeys(letter).slice(1)) {
-          state.stainSeq += 1;
-          const s2 = {
-            type: goo,
-            until: now + 10,
-            id: state.stainSeq,
-            key: k,
-          };
-          const l2 = state.stains.get(k) || [];
-          l2.push(s2);
-          state.stains.set(k, l2);
-          stainOrder.push(s2);
+          addStain(k, goo, now + 10);
         }
       }
     }
 
-    // 组合打字：当前所有带液的键
     if (state.phase === "play") {
       pruneStains(now);
       const seen = new Set();
@@ -204,14 +224,22 @@ export function createColdGame(ui) {
       state.practiceHits += hits.length;
       ui.onPracticeHit?.(state, hits);
     }
-
     ui.onStain?.(state);
   }
 
-  function estimateKeys(x, y, goo) {
-    // 键盘大致区域
-    if (y < 0.28 || y > 0.7) return [];
-    const rowYs = [0.38, 0.48, 0.58];
+  function addStain(letter, type, until) {
+    state.stainSeq += 1;
+    const stain = { type, until, id: state.stainSeq, key: letter };
+    const list = state.stains.get(letter) || [];
+    list.push(stain);
+    state.stains.set(letter, list);
+    stainOrder.push(stain);
+  }
+
+  function estimateKeys(x, y) {
+    // 键盘大致在 stage 中上部
+    if (y < 0.22 || y > 0.62) return [];
+    const rowYs = [0.34, 0.42, 0.5];
     let row = 0;
     let best = 99;
     for (let i = 0; i < 3; i++) {
@@ -226,9 +254,7 @@ export function createColdGame(ui) {
       0,
       Math.min(rowStr.length - 1, Math.floor(x * rowStr.length)),
     );
-    const letter = rowStr[col];
-    if (goo === "snot") return columnKeys(letter);
-    return [letter];
+    return [rowStr[col]];
   }
 
   function wipePhone() {
@@ -242,13 +268,16 @@ export function createColdGame(ui) {
     return true;
   }
 
+  let voiceLockUntil = 0;
   function spitForVoice() {
     if (state.phase !== "play" || !state.running || state.finished) return;
+    const t = performance.now();
+    if (t < voiceLockUntil) return;
+    voiceLockUntil = t + 900;
     if (state.voiceIndex < VOICE_LINES.length) {
       const { end } = charsUnlockedByVoice(state.voiceIndex);
       state.revealedEnd = Math.max(state.revealedEnd, end);
-      const line = VOICE_LINES[state.voiceIndex];
-      ui.onVoice?.(line, state.voiceIndex, false);
+      ui.onVoice?.(VOICE_LINES[state.voiceIndex], state.voiceIndex, false);
       state.voiceIndex += 1;
       ui.onReveal?.(state);
     } else {
@@ -258,7 +287,6 @@ export function createColdGame(ui) {
 
   function backspace() {
     if (state.phase !== "play" || !state.running) return;
-    if (!state.typed) return;
     state.typed = state.typed.slice(0, -1);
     ui.onTyped?.(state);
   }
@@ -280,36 +308,48 @@ export function createColdGame(ui) {
   }
 
   function startPractice() {
-    state.phase = "practice";
-    state.running = true;
-    state.finished = false;
-    state.aim = 0;
-    state.holding = false;
-    state.holdTime = 0;
-    state.coughCd = 2;
-    state.sneezeCd = 6;
-    state.wipeCd = 0;
-    state.elapsed = 0;
-    state.practiceHits = 0;
-    state.projectiles = [];
+    Object.assign(state, {
+      phase: "practice",
+      running: true,
+      finished: false,
+      aim: 0,
+      holding: false,
+      holdTime: 0,
+      coughCharge: 0.7,
+      sneezeCharge: 0.4,
+      sneezeIndex: 0,
+      nextSneezeBig: false,
+      wipeCd: 0,
+      elapsed: 0,
+      practiceHits: 0,
+      projectiles: [],
+      intensity: 0,
+      previewForce: 0,
+    });
+    state.nextSneezeBig = peekSneezeBig();
     clearStains();
     ui.onPhase?.(state);
   }
 
   function startPlay() {
-    state.phase = "play";
-    state.running = true;
-    state.finished = false;
-    state.typed = "";
-    state.revealedEnd = 0;
-    state.voiceIndex = 0;
-    state.elapsed = 0;
-    state.coughCd = 3;
-    state.sneezeCd = 10;
-    state.wipeCd = 0;
-    state.holding = false;
-    state.holdTime = 0;
-    state.projectiles = [];
+    Object.assign(state, {
+      phase: "play",
+      running: true,
+      finished: false,
+      typed: "",
+      revealedEnd: 0,
+      voiceIndex: 0,
+      elapsed: 0,
+      coughCharge: 0,
+      sneezeCharge: 0,
+      sneezeIndex: 0,
+      wipeCd: 0,
+      holding: false,
+      holdTime: 0,
+      projectiles: [],
+      lastEmit: "",
+    });
+    state.nextSneezeBig = peekSneezeBig();
     clearStains();
     ui.onPhase?.(state);
     ui.onTyped?.(state);
@@ -319,60 +359,69 @@ export function createColdGame(ui) {
 
   function tick(dt) {
     if (!state.running || state.finished) return;
-
     if (state.phase === "play") state.elapsed += dt;
     if (state.wipeCd > 0) state.wipeCd = Math.max(0, state.wipeCd - dt);
 
-    const now = performance.now() / 1000;
-    pruneStains(now);
+    pruneStains(performance.now() / 1000);
 
-    // 憋气
+    // 预览力度：取两个蓄力的较大者（满格=1）
+    state.previewForce = Math.max(state.coughCharge, state.sneezeCharge);
+    state.nextSneezeBig = peekSneezeBig();
+
     if (state.holding) {
       state.holdTime += dt;
-      // 憋住时暂停自动喷的倒计时
-      if (state.holdTime >= 3) {
-        // 大面积散射：跟当前更“急”的那一下（喷嚏优先若更近）
-        const kind = state.sneezeCd <= state.coughCd ? "sneeze" : "cough";
+      if (state.holdTime >= HOLD_MAX) {
+        const kind = state.sneezeCharge >= state.coughCharge ? "sneeze" : "cough";
         burst(kind, true);
         state.holding = false;
         state.holdTime = 0;
-        state.coughCd = 3;
-        state.sneezeCd = kind === "sneeze" ? 10 : Math.max(state.sneezeCd, 3);
+        if (kind === "sneeze") state.sneezeCharge = 0;
+        else state.coughCharge = 0;
       }
     } else {
-      state.coughCd -= dt;
-      state.sneezeCd -= dt;
-      if (state.sneezeCd <= 0) {
+      state.coughCharge = Math.min(1, state.coughCharge + dt / COUGH_PERIOD);
+      state.sneezeCharge = Math.min(1, state.sneezeCharge + dt / SNEEZE_PERIOD);
+      // 满格才以最大强度喷出
+      if (state.sneezeCharge >= 1) {
         burst("sneeze", false);
-        state.sneezeCd = 10;
-      } else if (state.coughCd <= 0) {
+        state.sneezeCharge = 0;
+      } else if (state.coughCharge >= 1) {
         burst("cough", false);
-        state.coughCd = 3;
+        state.coughCharge = 0;
       }
     }
 
-    // 抛物线积分
-    const g = 1.35;
-    for (const p of state.projectiles) {
-      p.age += dt;
-      p.life -= dt;
-      p.vy += g * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-    }
+    // 积分弹道
     const remain = [];
     for (const p of state.projectiles) {
-      // 落到键盘平面
-      if (p.y >= 0.34 && p.vy > 0 && p.y <= 0.72) {
-        landOnKeys(p.x, p.y, p.goo);
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 10) p.trail.shift();
+      const prevY = p.y;
+      p.age += dt;
+      p.life -= dt;
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+
+      // 穿过键盘带时落地
+      const bandTop = 0.28;
+      const bandBot = 0.58;
+      const crossed =
+        !p.landed &&
+        p.vy > 0 &&
+        prevY < bandBot &&
+        p.y >= bandTop &&
+        p.y <= bandBot + 0.08;
+      if (crossed || (!p.landed && p.y >= bandTop && p.y <= bandBot && p.vy > 0 && p.age > 0.12)) {
+        p.landed = true;
+        landOnKeys(p.x, Math.min(bandBot, Math.max(bandTop, p.y)), p.goo);
         continue;
       }
-      if (p.life > 0 && p.y < 1.05 && p.x > -0.1 && p.x < 1.1) remain.push(p);
+      if (p.life > 0 && p.y < 1.1) remain.push(p);
     }
     state.projectiles = remain;
 
     ui.onTick?.(state);
-    ui.onStain?.(state);
   }
 
   return {
@@ -386,10 +435,14 @@ export function createColdGame(ui) {
     startPractice,
     startPlay,
     tick,
+    sampleArc,
     REPORT,
     VOICE_LINES,
     GOO,
     ROWS,
     payTier,
+    COUGH_PERIOD,
+    SNEEZE_PERIOD,
+    HOLD_MAX,
   };
 }

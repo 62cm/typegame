@@ -10,10 +10,11 @@
         --screen: #f2efe8;
         --ink: #1c1a17;
         --muted: #6a655c;
-        --accent: #2a6f8f;
-        --danger: #b04040;
         --ok: #3a7a4a;
-        --snot: #c8d040;
+        --cough: #7eb6d8;
+        --sneeze: #c8b038;
+        --water: #8ec8e8;
+        --yellow: #d4c020;
       }
       * {
         box-sizing: border-box;
@@ -25,20 +26,19 @@
         background: radial-gradient(ellipse at 50% 0%, #3a342c 0%, #0a0908 65%);
         color: var(--ink);
         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-        overflow-x: hidden;
       }
       body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 12px 12px 100px;
+        padding: 10px 10px 24px;
         user-select: none;
       }
       #nav {
         position: fixed;
-        right: 12px;
-        bottom: 12px;
-        z-index: 40;
+        right: 10px;
+        bottom: 10px;
+        z-index: 50;
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -51,35 +51,138 @@
         text-decoration: none;
         font-size: 12px;
       }
-      .hint-bar {
-        width: min(420px, 100%);
+
+      .hud {
+        width: min(440px, 100%);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         margin-bottom: 8px;
-        padding: 8px 12px;
-        background: rgba(20, 18, 16, 0.85);
-        border: 1px solid #444;
-        color: #d8d0c4;
+      }
+      .meter-card {
+        background: rgba(18, 16, 14, 0.92);
+        border: 1px solid #4a443c;
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: #e8e0d4;
+      }
+      .meter-card .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        flex-shrink: 0;
+        border: 1px solid #666;
+        background: #2a2620;
+      }
+      .logo.cough {
+        border-color: var(--cough);
+        box-shadow: 0 0 0 1px rgba(126, 182, 216, 0.3);
+      }
+      .logo.sneeze {
+        border-color: var(--sneeze);
+      }
+      .logo.sneeze.big {
+        border-color: var(--yellow);
+        background: #3a3410;
+        animation: throb 0.8s ease infinite;
+      }
+      @keyframes throb {
+        50% {
+          transform: scale(1.06);
+        }
+      }
+      .meter-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .meter-meta .name {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .meter-meta .sub {
+        font-size: 10px;
+        color: #9a9080;
+      }
+      .bar {
+        height: 12px;
+        background: #1a1814;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid #3a3530;
+      }
+      .bar > i {
+        display: block;
+        height: 100%;
+        width: 0%;
+        border-radius: 6px;
+        transition: width 0.05s linear;
+      }
+      .bar.cough > i {
+        background: linear-gradient(90deg, #4a7a90, var(--cough), #e8f4ff);
+      }
+      .bar.sneeze > i {
+        background: linear-gradient(90deg, #6a6a30, var(--sneeze), #fff3a0);
+      }
+      .bar.sneeze.big > i {
+        background: linear-gradient(90deg, #6a5010, var(--yellow), #fff8c0);
+      }
+      .power {
+        grid-column: 1 / -1;
+        background: rgba(18, 16, 14, 0.92);
+        border: 1px solid #4a443c;
+        border-radius: 12px;
+        padding: 8px 10px;
+        color: #e8e0d4;
+      }
+      .power .label {
+        display: flex;
+        justify-content: space-between;
         font-size: 12px;
-        line-height: 1.45;
+        margin-bottom: 4px;
       }
-      .hint-bar b {
-        color: #f0e0c0;
+      .power .bar {
+        height: 16px;
       }
+      .power .bar > i {
+        background: linear-gradient(90deg, #3a5a30, #c0c040 70%, #ff6040);
+      }
+      .power .max {
+        color: #ffb040;
+        font-weight: 700;
+      }
+
       .stage {
         position: relative;
-        width: min(420px, 100%);
+        width: min(440px, 100%);
+      }
+      #fx {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 20;
       }
       .phone {
         width: 100%;
         background: var(--bezel);
         border-radius: 28px;
-        padding: 12px 10px 18px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
-        transform-origin: 50% 80%;
-        transition: transform 0.08s linear;
+        padding: 12px 10px 14px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
+        transform-origin: 50% 100%;
       }
       .notch {
-        width: 38%;
-        height: 18px;
+        width: 36%;
+        height: 16px;
         margin: 0 auto 8px;
         background: #050506;
         border-radius: 0 0 12px 12px;
@@ -91,7 +194,7 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        min-height: 640px;
+        min-height: 520px;
       }
       .screen.practice-empty .dictation,
       .screen.practice-empty .compose,
@@ -103,13 +206,12 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        min-height: 280px;
       }
       .status {
         display: flex;
         justify-content: space-between;
-        gap: 6px;
-        flex-wrap: wrap;
-        padding: 8px 10px 4px;
+        padding: 8px 10px;
         font-size: 11px;
         color: var(--muted);
         background: #e8e4db;
@@ -128,7 +230,7 @@
       .pay-tiers span {
         flex: 1;
         text-align: center;
-        padding: 3px 2px;
+        padding: 3px;
         border: 1px solid #d0cbc0;
         border-radius: 4px;
         background: #f7f4ee;
@@ -139,77 +241,62 @@
         font-weight: 600;
       }
       .dictation {
-        padding: 10px 12px 8px;
-        background: linear-gradient(180deg, #dfe8ef, #eef2f5);
+        padding: 8px 10px;
+        background: #e4ebf0;
         border-bottom: 1px solid #c9d3dc;
       }
       .mic-row {
         display: flex;
-        gap: 10px;
+        gap: 8px;
       }
       .mic {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         border: 2px solid #4a7a94;
         background: radial-gradient(circle at 40% 35%, #9ec9e0, #3a6a82);
-        cursor: pointer;
         color: #fff;
         font-size: 11px;
         font-weight: 700;
-      }
-      .mic.pulse {
-        animation: pulse 0.9s ease infinite;
-      }
-      @keyframes pulse {
-        50% {
-          box-shadow: 0 0 0 8px rgba(60, 120, 160, 0.2);
-        }
+        cursor: pointer;
+        z-index: 2;
+        position: relative;
       }
       .bubbles {
         flex: 1;
-        max-height: 72px;
+        max-height: 64px;
         overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
       }
       .bubble {
         padding: 5px 8px;
+        margin-bottom: 4px;
         background: #fff;
         border: 1px solid #c5d0d8;
-        border-radius: 10px 10px 10px 4px;
+        border-radius: 10px;
         font-size: 11px;
-        line-height: 1.4;
-      }
-      .bubble.sys {
-        background: #f0f4f7;
-        color: var(--muted);
       }
       .reveal-line {
         margin-top: 6px;
         font-size: 11px;
-        line-height: 1.45;
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: Georgia, serif;
         word-break: break-word;
-        min-height: 2.4em;
+        min-height: 2em;
       }
       .reveal-line .ghost {
         color: #b8c0c8;
       }
-      .reveal-line .next {
-        background: #ffe08a;
-      }
       .kb-wrap {
         position: relative;
+        z-index: 1;
         padding: 10px 6px;
         background: #ddd6c8;
       }
       .kb-hint {
-        font-size: 10px;
+        font-size: 11px;
         color: var(--muted);
         text-align: center;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        font-weight: 600;
       }
       .kb {
         display: flex;
@@ -220,61 +307,56 @@
       .kb-row {
         display: flex;
         gap: 3px;
-        justify-content: center;
       }
       .key {
         position: relative;
-        width: 28px;
-        height: 34px;
+        width: 30px;
+        height: 36px;
         border: 1px solid #aaa;
         border-radius: 5px;
         background: linear-gradient(180deg, #faf8f3, #e8e2d6);
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         display: grid;
         place-items: center;
         box-shadow: 0 1px 0 #bbb;
         pointer-events: none;
       }
-      .key.wide {
-        width: 48px;
-        font-size: 10px;
+      .key.wide,
+      .key.space {
         pointer-events: auto;
         cursor: pointer;
       }
+      .key.wide {
+        width: 52px;
+        font-size: 11px;
+      }
       .key.space {
-        width: 140px;
-        pointer-events: auto;
-        cursor: pointer;
+        width: 150px;
       }
       .stain {
         position: absolute;
         inset: 3px;
         border-radius: 4px;
+        opacity: 0.8;
         pointer-events: none;
-        opacity: 0.78;
       }
       .stain.spit {
-        background: radial-gradient(circle, #ffffffaa, #b8d0f066);
+        background: radial-gradient(circle, #fff, #b8d0f066);
       }
-      .stain.snot {
-        background: radial-gradient(circle at 40% 40%, #e8f060, #9aaa28);
+      .stain.water {
+        background: radial-gradient(circle, #d0f0ff, #60a0c8aa);
       }
-      #fx {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 5;
+      .stain.yellow {
+        background: radial-gradient(circle at 40% 40%, #f0e060, #a09018);
       }
       .compose {
         flex: 1;
+        background: #f7f4ee;
         display: flex;
         flex-direction: column;
-        min-height: 0;
-        background: #f7f4ee;
+        min-height: 80px;
       }
       .compose-label {
         padding: 6px 12px 0;
@@ -282,24 +364,21 @@
         color: var(--muted);
       }
       .typed {
-        flex: 1;
-        margin: 4px 10px 6px;
-        padding: 10px;
+        margin: 4px 10px;
+        padding: 8px;
         background: #fff;
         border: 1px solid #d4cdc0;
-        border-radius: 10px;
+        border-radius: 8px;
         font-size: 12px;
-        line-height: 1.5;
-        overflow-y: auto;
-        font-family: Georgia, "Times New Roman", serif;
-        min-height: 70px;
+        font-family: Georgia, serif;
+        min-height: 56px;
         word-break: break-word;
       }
       .typed .ok {
         color: var(--ok);
       }
       .typed .bad {
-        color: var(--danger);
+        color: #b04040;
         text-decoration: underline;
       }
       .typed .pending {
@@ -309,16 +388,16 @@
         padding: 0 12px 8px;
         font-size: 11px;
         color: var(--muted);
+        min-height: 1.2em;
       }
 
-      /* 石膏四肢操作区（无准心） */
       .body-rig {
-        margin-top: 10px;
-        width: min(420px, 100%);
+        margin-top: 8px;
+        width: min(440px, 100%);
         display: grid;
-        grid-template-columns: 1fr 1.2fr 1fr;
+        grid-template-columns: 1fr 1.4fr 1fr;
         gap: 8px;
-        align-items: end;
+        align-items: stretch;
       }
       .cast {
         background: linear-gradient(180deg, #e8e4dc, #c8c2b4);
@@ -328,7 +407,6 @@
         text-align: center;
         font-size: 11px;
         color: #4a453c;
-        box-shadow: inset 0 0 0 1px #f0ece4;
       }
       .cast small {
         display: block;
@@ -337,22 +415,30 @@
       }
       .mouth-zone {
         background: #2a2220;
-        border: 1px solid #5a4038;
-        border-radius: 14px;
-        padding: 12px 10px;
+        border: 2px solid #6a4840;
+        border-radius: 16px;
+        padding: 10px;
         color: #e8d8d0;
         text-align: center;
+        position: relative;
+        z-index: 2;
+      }
+      .mouth-face {
+        font-size: 28px;
+        line-height: 1;
+        margin-bottom: 4px;
       }
       .mouth-zone .title {
         font-size: 12px;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
       .hold-meter {
-        height: 8px;
+        height: 10px;
         background: #1a1412;
-        border-radius: 4px;
+        border-radius: 5px;
         overflow: hidden;
         margin: 6px 0;
+        border: 1px solid #4a3030;
       }
       .hold-meter > i {
         display: block;
@@ -360,65 +446,62 @@
         width: 0%;
         background: linear-gradient(90deg, #6a8a40, #d0c040, #c04040);
       }
-      .mouth-zone .ops {
+      .ops {
         font-size: 11px;
         color: #a89890;
         line-height: 1.4;
       }
-      .btn-wipe {
-        width: 100%;
-        margin-top: 6px;
-        padding: 8px;
-        border: 1px solid #8a7050;
-        background: #d8c8a8;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 12px;
-      }
-      .btn-wipe:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-      .btn-hold {
+      .btn-wipe,
+      .btn-hold,
+      .btn-next {
         width: 100%;
         margin-top: 6px;
         padding: 10px;
-        border: 1px solid #8a4040;
-        background: #3a2020;
-        color: #f0d0d0;
         border-radius: 8px;
         cursor: pointer;
         font-size: 13px;
+        border: 1px solid #888;
+      }
+      .btn-wipe {
+        background: #d8c8a8;
+        border-color: #8a7050;
+      }
+      .btn-wipe:disabled {
+        opacity: 0.45;
+      }
+      .btn-hold {
+        background: #3a2020;
+        border-color: #8a4040;
+        color: #f0d0d0;
+        font-weight: 700;
       }
       .btn-hold.down {
-        background: #6a2828;
+        background: #7a3030;
+        transform: scale(0.98);
       }
       .btn-next {
-        margin-top: 8px;
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #4a7a50;
         background: #1a2a1c;
+        border-color: #4a7a50;
         color: #d0e8d0;
-        border-radius: 8px;
-        cursor: pointer;
+      }
+      .hidden {
+        display: none !important;
       }
 
       .overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.78);
+        background: rgba(0, 0, 0, 0.8);
         display: grid;
         place-items: center;
-        z-index: 30;
+        z-index: 40;
         padding: 16px;
       }
-      .overlay.hidden,
-      .hidden {
+      .overlay.hidden {
         display: none !important;
       }
       .card {
-        width: min(440px, 100%);
+        width: min(460px, 100%);
         background: #14161a;
         color: #e8e4da;
         border: 1px solid #333;
@@ -442,7 +525,6 @@
         margin: 0 0 14px;
       }
       .card button {
-        appearance: none;
         border: 1px solid #8a4030;
         background: #2a1818;
         color: #f0e8e0;
@@ -455,7 +537,19 @@
         font-size: 28px;
         color: #e8c070;
         font-weight: 700;
-        margin: 8px 0 12px;
+        margin: 8px 0;
+      }
+      .flash {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 25;
+        opacity: 0;
+        background: radial-gradient(circle at 50% 85%, rgba(255, 240, 200, 0.35), transparent 55%);
+        transition: opacity 0.15s;
+      }
+      .flash.on {
+        opacity: 1;
       }
     </style>
   </head>
@@ -464,18 +558,18 @@
       <a href="index.html">卡通版</a>
       <a href="monitor.html">真人版</a>
     </div>
+    <div class="flash" id="flash"></div>
 
     <div class="overlay" id="overlay">
       <div class="card">
         <h1>感冒模式</h1>
-        <p>四肢打着石膏，你只能用脸对着手机「咳 / 喷嚏」喷射。没有准心，靠视线方向。</p>
+        <p>四肢石膏，只能控<strong>方向</strong>和<strong>憋气</strong>。蓄满才以最大强度喷出。</p>
         <ul>
-          <li><b>咳嗽</b>约 3 秒一次：唾沫星子，轻、散得少。</li>
-          <li><b>喷嚏</b>约 10 秒一次（忍不住）：喷出青黄浓鼻涕，粘键久、还会往下淌。</li>
-          <li><b>挪鼠标 / 手指</b>：改视线方向，决定抛物线落点。</li>
-          <li><b>按住憋气</b>：忍住不喷；憋满 3 秒会大面积散射，力度更猛（仍跟方向）。</li>
-          <li><b>石膏手擦手机</b>：抹掉屏幕上的口水（冷却）。</li>
-          <li>开局先对着<b>空手机</b>练习喷射，再接老板电话。</li>
+          <li><b>咳嗽</b>（3s 蓄满）：唾沫星子 · 看左侧进度条</li>
+          <li><b>小喷嚏</b>：清水鼻涕 · <b>每第 3 个</b>是大喷嚏：黄鼻涕</li>
+          <li>鼠标左右 = 视线方向（可见抛物线，无准心）</li>
+          <li>按住空格/按钮憋气，满 3s 大散射</li>
+          <li>先练空手机，再接老板电话</li>
         </ul>
         <button type="button" id="btn-practice">先练喷射</button>
       </div>
@@ -487,48 +581,68 @@
         <p id="win-tier"></p>
         <div class="win-amt" id="win-amt"></div>
         <p id="win-time"></p>
-        <button type="button" id="btn-again">石膏还没拆，再来</button>
+        <button type="button" id="btn-again">再来</button>
       </div>
     </div>
 
-    <div class="hint-bar" id="hint">
-      移动鼠标瞄准（无准心）· 按住空格/下方按钮憋气 · 咳嗽与喷嚏会自己喷
+    <div class="hud">
+      <div class="meter-card">
+        <div class="row">
+          <div class="logo cough" id="logo-cough" title="咳嗽">咳</div>
+          <div class="meter-meta">
+            <div class="name">咳嗽</div>
+            <div class="sub" id="cough-sub">唾沫星子 · 蓄满最大喷出</div>
+          </div>
+        </div>
+        <div class="bar cough"><i id="cough-bar"></i></div>
+      </div>
+      <div class="meter-card">
+        <div class="row">
+          <div class="logo sneeze" id="logo-sneeze" title="喷嚏">嚏</div>
+          <div class="meter-meta">
+            <div class="name" id="sneeze-name">小喷嚏</div>
+            <div class="sub" id="sneeze-sub">下次：清水鼻涕</div>
+          </div>
+        </div>
+        <div class="bar sneeze" id="sneeze-bar-wrap"><i id="sneeze-bar"></i></div>
+      </div>
+      <div class="power">
+        <div class="label">
+          <span>喷射强度</span>
+          <span id="power-label">蓄力中…</span>
+        </div>
+        <div class="bar"><i id="power-bar"></i></div>
+      </div>
     </div>
 
     <div class="stage" id="stage">
+      <canvas id="fx"></canvas>
       <div class="phone" id="phone">
         <div class="notch"></div>
         <div class="screen practice-empty" id="screen">
-          <canvas id="fx"></canvas>
           <div class="status">
             <span>阶段 <b id="phase">练习</b></span>
-            <span>咳 <b id="cough-cd">3.0</b>s</span>
-            <span>喷嚏 <b id="sneeze-cd">10</b>s</span>
+            <span>命中 <b id="hits">0</b></span>
             <span>⏱ <b id="timer">0:00</b></span>
           </div>
           <div class="pay-tiers">
             <span id="tier-2000">奖金 ¥2000 · ≤3min</span>
             <span id="tier-1000">合同 ¥1000 · ≤5min</span>
-            <span id="tier-100">辛苦 ¥100 · 不限时</span>
+            <span id="tier-100">辛苦 ¥100</span>
           </div>
-
           <div class="dictation">
             <div class="mic-row">
               <button type="button" class="mic" id="mic">咳·听</button>
-              <div class="bubbles" id="bubbles">
-                <div class="bubble sys">对着话筒再咳一口（喷到话筒也行）才播口述。</div>
-              </div>
+              <div class="bubbles" id="bubbles"></div>
             </div>
             <div class="reveal-line" id="reveal"></div>
           </div>
-
           <div class="kb-wrap" id="kb-wrap">
-            <div class="kb-hint" id="kb-hint">空手机练习：把口水喷到键上即可</div>
+            <div class="kb-hint" id="kb-hint">移动鼠标看抛物线 · 蓄满会自动喷</div>
             <div class="kb" id="kb"></div>
           </div>
-
           <div class="compose">
-            <div class="compose-label">对话框 · 石膏指头够不着实体键，全靠喷射</div>
+            <div class="compose-label">对话框 · 打出来的报告</div>
             <div class="typed" id="typed"></div>
             <div class="emit" id="emit"></div>
           </div>
@@ -539,67 +653,55 @@
     <div class="body-rig">
       <div class="cast">
         左臂石膏
-        <small>动不了细操作</small>
+        <small>擦屏用</small>
         <button type="button" class="btn-wipe" id="btn-wipe">擦手机</button>
       </div>
-      <div class="mouth-zone">
-        <div class="title">脸 / 口鼻（视线随鼠标）</div>
+      <div class="mouth-zone" id="mouth">
+        <div class="mouth-face" id="mouth-face">😮</div>
+        <div class="title">口鼻 · 视线随鼠标</div>
         <div class="hold-meter"><i id="hold-fill"></i></div>
-        <div class="ops">
-          挪鼠标 = 方向<br />
-          按住 = 憋气（满 3s 大散射）
-        </div>
+        <div class="ops">空格 / 按住下方 = 憋气（满 3s 大散射）</div>
         <button type="button" class="btn-hold" id="btn-hold">按住憋气</button>
-        <button type="button" class="btn-next hidden" id="btn-start-play">练习够了，接老板电话</button>
+        <button type="button" class="btn-next hidden" id="btn-start-play">
+          练习够了，接老板电话
+        </button>
       </div>
-      <div class="cast">
-        右臂石膏
-        <small>只能笨拙擦屏</small>
-      </div>
+      <div class="cast">右臂石膏<small>动不了细操作</small></div>
     </div>
 
     <script type="module">
-      import { createColdGame, ROWS } from "./cold.js";
+      import { createColdGame, ROWS, sampleArc } from "./cold.js";
 
+      const stage = document.getElementById("stage");
       const phone = document.getElementById("phone");
       const screen = document.getElementById("screen");
       const fx = document.getElementById("fx");
       const ctx = fx.getContext("2d");
+      const flash = document.getElementById("flash");
+
+      const coughBar = document.getElementById("cough-bar");
+      const sneezeBar = document.getElementById("sneeze-bar");
+      const sneezeBarWrap = document.getElementById("sneeze-bar-wrap");
+      const logoSneeze = document.getElementById("logo-sneeze");
+      const powerBar = document.getElementById("power-bar");
+      const powerLabel = document.getElementById("power-label");
       const holdFill = document.getElementById("hold-fill");
       const btnHold = document.getElementById("btn-hold");
       const btnWipe = document.getElementById("btn-wipe");
       const btnStartPlay = document.getElementById("btn-start-play");
-
-      const els = {
-        overlay: document.getElementById("overlay"),
-        win: document.getElementById("win"),
-        phase: document.getElementById("phase"),
-        coughCd: document.getElementById("cough-cd"),
-        sneezeCd: document.getElementById("sneeze-cd"),
-        timer: document.getElementById("timer"),
-        hint: document.getElementById("hint"),
-        kb: document.getElementById("kb"),
-        kbHint: document.getElementById("kb-hint"),
-        typed: document.getElementById("typed"),
-        emit: document.getElementById("emit"),
-        bubbles: document.getElementById("bubbles"),
-        reveal: document.getElementById("reveal"),
-        mic: document.getElementById("mic"),
-      };
+      const mouthFace = document.getElementById("mouth-face");
 
       function fmt(t) {
         const m = Math.floor(t / 60);
         const s = Math.floor(t % 60);
         return `${m}:${String(s).padStart(2, "0")}`;
       }
-
       function escapeHtml(s) {
         return String(s)
           .replaceAll("&", "&amp;")
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
       }
-
       function speak(text) {
         try {
           window.speechSynthesis.cancel();
@@ -611,27 +713,40 @@
       }
 
       function resizeFx() {
-        const r = screen.getBoundingClientRect();
-        fx.width = r.width * devicePixelRatio;
-        fx.height = r.height * devicePixelRatio;
-        fx.style.width = r.width + "px";
-        fx.style.height = r.height + "px";
+        const r = stage.getBoundingClientRect();
+        const mouth = document.getElementById("mouth").getBoundingClientRect();
+        // canvas 覆盖手机 + 口鼻区
+        const top = r.top;
+        const bottom = mouth.bottom;
+        const left = Math.min(r.left, mouth.left);
+        const right = Math.max(r.right, mouth.right);
+        const w = right - left;
+        const h = bottom - top;
+        fx.style.position = "fixed";
+        fx.style.left = left + "px";
+        fx.style.top = top + "px";
+        fx.style.width = w + "px";
+        fx.style.height = h + "px";
+        fx.width = Math.max(1, w * devicePixelRatio);
+        fx.height = Math.max(1, h * devicePixelRatio);
         ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+        fx._box = { left, top, w, h };
       }
 
       function buildKeyboard() {
-        els.kb.innerHTML = "";
+        const kb = document.getElementById("kb");
+        kb.innerHTML = "";
         for (const row of ROWS) {
           const rowEl = document.createElement("div");
           rowEl.className = "kb-row";
           for (const ch of row) {
-            const btn = document.createElement("div");
-            btn.className = "key";
-            btn.dataset.key = ch;
-            btn.innerHTML = `<span>${ch}</span><i class="stain-layer"></i>`;
-            rowEl.appendChild(btn);
+            const el = document.createElement("div");
+            el.className = "key";
+            el.dataset.key = ch;
+            el.innerHTML = `<span>${ch}</span><i class="stain-layer"></i>`;
+            rowEl.appendChild(el);
           }
-          els.kb.appendChild(rowEl);
+          kb.appendChild(rowEl);
         }
         const util = document.createElement("div");
         util.className = "kb-row";
@@ -639,22 +754,23 @@
         bk.type = "button";
         bk.className = "key wide";
         bk.textContent = "⌫";
-        bk.addEventListener("click", () => game.backspace());
+        bk.onclick = () => game.backspace();
         const sp = document.createElement("button");
         sp.type = "button";
         sp.className = "key space";
         sp.textContent = "space";
-        sp.addEventListener("click", () => game.space());
+        sp.onclick = () => game.space();
         util.append(bk, sp);
-        els.kb.appendChild(util);
+        kb.appendChild(util);
       }
 
-      /** 归一化坐标 (0-1) → 命中键 */
+      /** stage 归一化 → 键 */
       function hitTest(nx, ny) {
-        const keys = [...els.kb.querySelectorAll(".key[data-key]")];
-        const sr = screen.getBoundingClientRect();
-        const px = sr.left + nx * sr.width;
-        const py = sr.top + ny * sr.height;
+        const box = fx._box;
+        if (!box) return [];
+        const px = box.left + nx * box.w;
+        const py = box.top + ny * box.h;
+        const keys = [...document.querySelectorAll(".key[data-key]")];
         const hits = [];
         for (const el of keys) {
           const r = el.getBoundingClientRect();
@@ -662,10 +778,9 @@
             hits.push(el.dataset.key);
           }
         }
-        // 放宽：落在键盘带内取最近键
         if (!hits.length) {
           const kb = document.getElementById("kb-wrap").getBoundingClientRect();
-          if (py >= kb.top && py <= kb.bottom && px >= kb.left && px <= kb.right) {
+          if (py >= kb.top - 6 && py <= kb.bottom + 6 && px >= kb.left && px <= kb.right) {
             let best = null;
             let bestD = 1e9;
             for (const el of keys) {
@@ -678,12 +793,11 @@
                 best = el.dataset.key;
               }
             }
-            if (best && bestD < 50 ** 2) hits.push(best);
+            if (best && bestD < 70 ** 2) hits.push(best);
           }
         }
-        // 喷到话筒：当 ny 很靠上且靠近左侧
-        const mic = els.mic.getBoundingClientRect();
-        if (px >= mic.left - 8 && px <= mic.right + 8 && py >= mic.top - 8 && py <= mic.bottom + 8) {
+        const mic = document.getElementById("mic").getBoundingClientRect();
+        if (px >= mic.left - 10 && px <= mic.right + 10 && py >= mic.top - 10 && py <= mic.bottom + 10) {
           game.spitForVoice();
         }
         return hits;
@@ -691,7 +805,7 @@
 
       function paintStains(state) {
         const now = performance.now() / 1000;
-        els.kb.querySelectorAll(".key[data-key]").forEach((btn) => {
+        document.querySelectorAll(".key[data-key]").forEach((btn) => {
           const list = (state.stains.get(btn.dataset.key) || []).filter((s) => s.until > now);
           const layer = btn.querySelector(".stain-layer");
           if (!list.length) {
@@ -704,63 +818,116 @@
       }
 
       function drawFx(state) {
-        const w = fx.clientWidth;
-        const h = fx.clientHeight;
-        if (!w) return;
+        const box = fx._box;
+        if (!box) return;
+        const w = box.w;
+        const h = box.h;
         ctx.clearRect(0, 0, w, h);
-        // 无准心：只画喷射液滴与淡淡视线弧
-        const mouthX = (0.5 + state.aim * 0.08) * w;
-        const mouthY = 0.92 * h;
-        const lookX = (0.5 + state.aim * 0.42) * w;
-        const lookY = 0.48 * h;
-        ctx.strokeStyle = "rgba(80,60,50,0.18)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(mouthX, mouthY);
-        ctx.quadraticCurveTo((mouthX + lookX) / 2, lookY - 40, lookX, lookY);
-        ctx.stroke();
 
-        for (const p of state.projectiles) {
+        // 预览抛物线（明显）
+        const force = Math.max(0.25, state.previewForce || 0.25);
+        const arc = sampleArc(state.aim, force, 0);
+        ctx.beginPath();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = state.holding
+          ? "rgba(255,120,80,0.85)"
+          : "rgba(255,230,160,0.75)";
+        ctx.lineWidth = 3;
+        arc.forEach((p, i) => {
           const x = p.x * w;
           const y = p.y * h;
-          const rad = Math.max(2, p.r * w);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 落点光晕（非准心）
+        const tip = arc[arc.length - 1];
+        if (tip) {
           ctx.beginPath();
-          ctx.fillStyle = p.goo === "snot" ? "rgba(200,208,64,0.85)" : "rgba(220,235,255,0.75)";
-          ctx.arc(x, y, rad, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,220,120,0.22)";
+          ctx.arc(tip.x * w, tip.y * h, 16 + force * 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 飞行液滴 + 尾迹
+        for (const p of state.projectiles) {
+          if (p.trail?.length > 1) {
+            ctx.beginPath();
+            ctx.strokeStyle =
+              p.goo === "yellow"
+                ? "rgba(220,200,40,0.45)"
+                : p.goo === "water"
+                  ? "rgba(140,200,230,0.4)"
+                  : "rgba(200,220,255,0.35)";
+            ctx.lineWidth = 2;
+            p.trail.forEach((t, i) => {
+              const x = t.x * w;
+              const y = t.y * h;
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+          }
+          ctx.beginPath();
+          ctx.fillStyle =
+            p.goo === "yellow"
+              ? "rgba(220,200,40,0.95)"
+              : p.goo === "water"
+                ? "rgba(160,210,240,0.9)"
+                : "rgba(230,240,255,0.9)";
+          ctx.arc(p.x * w, p.y * h, Math.max(3, p.r * w), 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
+      function updateMeters(state) {
+        coughBar.style.width = state.coughCharge * 100 + "%";
+        sneezeBar.style.width = state.sneezeCharge * 100 + "%";
+        const big = state.nextSneezeBig;
+        logoSneeze.classList.toggle("big", big);
+        sneezeBarWrap.classList.toggle("big", big);
+        document.getElementById("sneeze-name").textContent = big ? "大喷嚏（蓄力）" : "小喷嚏（蓄力）";
+        document.getElementById("sneeze-sub").textContent = big
+          ? "下次喷出：黄鼻涕"
+          : "下次喷出：清水鼻涕 · 每 3 个一大";
+        const pow = state.holding
+          ? Math.min(1, state.holdTime / 3) * 1.2
+          : Math.max(state.coughCharge, state.sneezeCharge);
+        powerBar.style.width = Math.min(100, pow * 100) + "%";
+        if (state.holding) {
+          powerLabel.innerHTML = `憋气 ${state.holdTime.toFixed(1)}/3s`;
+          mouthFace.textContent = "😣";
+        } else if (pow >= 0.98) {
+          powerLabel.innerHTML = `<span class="max">最大 · 即将喷出</span>`;
+          mouthFace.textContent = "😧";
+        } else {
+          powerLabel.textContent = `蓄力 ${(pow * 100).toFixed(0)}%`;
+          mouthFace.textContent = "😮";
+        }
+        holdFill.style.width = state.holding
+          ? Math.min(100, (state.holdTime / 3) * 100) + "%"
+          : "0%";
+      }
+
       function renderTyped(state) {
+        const el = document.getElementById("typed");
         if (state.phase !== "play") {
-          els.typed.innerHTML = `<span class="pending">练习中不打字 · 已命中键 ${state.practiceHits} 次</span>`;
+          el.innerHTML = `<span class="pending">练习命中 ${state.practiceHits} 次（建议 ≥6 再开打）</span>`;
           return;
         }
         const report = game.REPORT;
         const typed = state.typed;
         let html = "";
         for (let i = 0; i < typed.length; i++) {
-          const ok = i < report.length && typed[i] === report[i];
+          const ok = typed[i] === report[i];
           html += `<span class="${ok ? "ok" : "bad"}">${escapeHtml(typed[i] === " " ? "·" : typed[i])}</span>`;
         }
         if (typed.length < report.length) {
-          html += `<span class="pending">${escapeHtml(report.slice(typed.length, typed.length + 40))}</span>`;
+          html += `<span class="pending">${escapeHtml(report.slice(typed.length, typed.length + 36))}</span>`;
         }
-        els.typed.innerHTML = html || `<span class="pending">（等喷射拼出字母）</span>`;
-        els.emit.textContent = state.lastEmit ? `溅出：${state.lastEmit.toUpperCase()}` : "";
-      }
-
-      function renderReveal(state) {
-        if (state.phase !== "play") {
-          els.reveal.textContent = "";
-          return;
-        }
-        const report = game.REPORT;
-        const unlocked = report.slice(0, state.revealedEnd);
-        const rest = report.slice(state.revealedEnd, state.revealedEnd + 36);
-        els.reveal.innerHTML =
-          `<span>${escapeHtml(unlocked)}</span>` +
-          (rest ? `<span class="ghost">${escapeHtml(rest)}…</span>` : "");
+        el.innerHTML = html || `<span class="pending">等喷射拼字母…</span>`;
       }
 
       const game = createColdGame({
@@ -768,58 +935,57 @@
         onPhase(state) {
           const practice = state.phase === "practice";
           screen.classList.toggle("practice-empty", practice);
-          els.phase.textContent = practice ? "练习" : state.phase === "play" ? "交报告" : "完成";
-          els.kbHint.textContent = practice
-            ? "空手机练习：移动视线，把口水喷到键位上"
-            : "正赛：喷射组合出报告字母；喷到话筒可听口述";
+          document.getElementById("phase").textContent = practice ? "练习" : "交报告";
+          document.getElementById("kb-hint").textContent = practice
+            ? "空手机：看黄色抛物线，蓄满自动喷到键盘上"
+            : "正赛：拼出报告；喷到话筒可听口述";
           btnStartPlay.classList.toggle("hidden", !practice);
-          els.hint.textContent = practice
-            ? "练习：鼠标控制方向 · 空格憋气 · 命中若干次后可开始正赛"
-            : "正赛中：咳嗽 3s / 喷嚏 10s · 憋满 3s 大散射 · 石膏手擦屏重置";
-          if (practice) {
-            els.bubbles.innerHTML = '<div class="bubble sys">先别接电话。对着空屏幕练准头。</div>';
-          }
+          resizeFx();
         },
         onBurst(state) {
           const b = state.lastBurst;
-          if (!b) return;
-          els.emit.textContent = b.forced
-            ? `憋不住了！大力${b.kind === "sneeze" ? "喷嚏" : "咳嗽"}散射`
-            : b.kind === "sneeze"
-              ? "啊嚏——青黄浓鼻涕"
-              : "咳——唾沫星子";
+          flash.classList.add("on");
+          setTimeout(() => flash.classList.remove("on"), 120);
+          mouthFace.textContent = b?.kind === "sneeze" ? "🤧" : "😤";
+          let msg = "";
+          if (b?.forced) msg = "憋不住！大力散射 ";
+          if (b?.kind === "sneeze") {
+            msg += b.big ? "大喷嚏·黄鼻涕" : "小喷嚏·清水鼻涕";
+          } else msg += "咳嗽·唾沫星子";
+          document.getElementById("emit").textContent = msg + ` · 强度 ${((b?.force || 1) * 100) | 0}%`;
         },
         onStain: paintStains,
         onTyped: renderTyped,
-        onReveal: renderReveal,
+        onReveal(state) {
+          const report = game.REPORT;
+          const u = report.slice(0, state.revealedEnd);
+          const rest = report.slice(state.revealedEnd, state.revealedEnd + 40);
+          document.getElementById("reveal").innerHTML =
+            escapeHtml(u) + (rest ? `<span class="ghost">${escapeHtml(rest)}…</span>` : "");
+        },
         onPracticeHit(state, hits) {
-          els.emit.textContent = `练习命中：${hits.join(" ").toUpperCase()}（累计 ${state.practiceHits}）`;
-          if (state.practiceHits >= 8) btnStartPlay.classList.remove("hidden");
+          document.getElementById("hits").textContent = String(state.practiceHits);
+          document.getElementById("emit").textContent =
+            `命中 ${hits.join(" ").toUpperCase()} · 累计 ${state.practiceHits}`;
+          if (state.practiceHits >= 6) btnStartPlay.classList.remove("hidden");
         },
         onWipe() {
-          els.emit.textContent = "石膏胳膊笨拙地抹了一下屏幕…";
+          document.getElementById("emit").textContent = "石膏胳膊抹掉了屏上的鼻涕…";
         },
-        onVoice(line, index, replay) {
+        onVoice(line, i, replay) {
           const b = document.createElement("div");
           b.className = "bubble";
-          b.textContent = (replay ? "（重听）" : `口述 ${index + 1}：`) + line;
-          els.bubbles.appendChild(b);
-          els.bubbles.scrollTop = els.bubbles.scrollHeight;
-          els.mic.classList.add("pulse");
+          b.textContent = (replay ? "（重听）" : `口述${i + 1}：`) + line;
+          document.getElementById("bubbles").appendChild(b);
           speak(line);
-          setTimeout(() => els.mic.classList.remove("pulse"), 1000);
         },
         onTick(state) {
-          els.coughCd.textContent = Math.max(0, state.coughCd).toFixed(1);
-          els.sneezeCd.textContent = Math.max(0, state.sneezeCd).toFixed(1);
-          els.timer.textContent = fmt(state.elapsed);
-          holdFill.style.width = state.holding
-            ? Math.min(100, (state.holdTime / 3) * 100) + "%"
-            : "0%";
+          updateMeters(state);
+          document.getElementById("timer").textContent = fmt(state.elapsed);
+          document.getElementById("hits").textContent = String(state.practiceHits);
           btnWipe.disabled = state.wipeCd > 0;
-          btnWipe.textContent =
-            state.wipeCd > 0 ? `擦手机 ${state.wipeCd.toFixed(1)}s` : "擦手机";
-          phone.style.transform = `rotate(${state.aim * 4}deg)`;
+          btnWipe.textContent = state.wipeCd > 0 ? `擦 ${state.wipeCd.toFixed(1)}s` : "擦手机";
+          phone.style.transform = `rotate(${state.aim * 5}deg)`;
           drawFx(state);
           const e = state.elapsed;
           document.getElementById("tier-2000").classList.toggle("on", state.phase === "play" && e <= 180);
@@ -831,36 +997,38 @@
           document.getElementById("win-tier").textContent = `${pay.label} · ${pay.tip}`;
           document.getElementById("win-amt").textContent = `¥ ${pay.amount}`;
           document.getElementById("win-time").textContent = `用时 ${fmt(state.elapsed)}`;
-          try {
-            window.speechSynthesis.cancel();
-          } catch (_) {}
         },
       });
 
       buildKeyboard();
-      resizeFx();
-      window.addEventListener("resize", resizeFx);
 
-      function aimFromClientX(clientX) {
-        const r = screen.getBoundingClientRect();
-        const t = (clientX - r.left) / r.width;
+      function aimFromX(clientX) {
+        const box = fx._box || stage.getBoundingClientRect();
+        const left = box.left ?? box.x;
+        const w = box.w ?? box.width;
+        const t = (clientX - left) / w;
         game.setAim((t - 0.5) * 2);
       }
 
-      window.addEventListener("mousemove", (e) => aimFromClientX(e.clientX));
-      window.addEventListener("touchmove", (e) => {
-        if (e.touches[0]) aimFromClientX(e.touches[0].clientX);
-      }, { passive: true });
+      window.addEventListener("mousemove", (e) => aimFromX(e.clientX));
+      window.addEventListener(
+        "touchmove",
+        (e) => {
+          if (e.touches[0]) aimFromX(e.touches[0].clientX);
+        },
+        { passive: true },
+      );
 
-      function holdOn() {
+      function holdOn(e) {
+        e?.preventDefault?.();
         game.setHolding(true);
         btnHold.classList.add("down");
       }
-      function holdOff() {
+      function holdOff(e) {
+        e?.preventDefault?.();
         game.setHolding(false);
         btnHold.classList.remove("down");
       }
-
       window.addEventListener("keydown", (e) => {
         if (e.code === "Space") {
           e.preventDefault();
@@ -876,30 +1044,30 @@
       btnHold.addEventListener("mousedown", holdOn);
       btnHold.addEventListener("mouseup", holdOff);
       btnHold.addEventListener("mouseleave", holdOff);
-      btnHold.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        holdOn();
-      });
+      btnHold.addEventListener("touchstart", holdOn, { passive: false });
       btnHold.addEventListener("touchend", holdOff);
 
-      btnWipe.addEventListener("click", () => game.wipePhone());
-      els.mic.addEventListener("click", () => game.spitForVoice());
+      btnWipe.onclick = () => game.wipePhone();
+      document.getElementById("mic").onclick = () => game.spitForVoice();
 
       document.getElementById("btn-practice").onclick = () => {
-        els.overlay.classList.add("hidden");
+        document.getElementById("overlay").classList.add("hidden");
         game.startPractice();
-        resizeFx();
+        requestAnimationFrame(resizeFx);
       };
       btnStartPlay.onclick = () => {
         game.startPlay();
-        els.bubbles.innerHTML =
-          '<div class="bubble sys">喷到话筒或点「咳·听」收听领导口述。</div>';
-        resizeFx();
+        document.getElementById("bubbles").innerHTML =
+          '<div class="bubble">喷到话筒或点「咳·听」听口述</div>';
+        requestAnimationFrame(resizeFx);
       };
       document.getElementById("btn-again").onclick = () => {
         document.getElementById("win").classList.add("hidden");
-        els.overlay.classList.remove("hidden");
+        document.getElementById("overlay").classList.remove("hidden");
       };
+
+      window.addEventListener("resize", resizeFx);
+      resizeFx();
 
       let last = performance.now();
       function loop(now) {
