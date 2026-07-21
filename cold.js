@@ -51,21 +51,25 @@ export function payTier(elapsedSec) {
 }
 
 /**
- * 预览抛物线（归一化坐标，相对 stage/view-port）
- * 手机不动；鼠标只改落点瞄准键盘区
+ * 近抛抛物线：俯仰 aimY 决定看近处键盘还是抬头喷空。
+ * aimY=+1 低头看键盘（近）；aimY=-1 抬头（远/喷空）
+ * 坐标：view-port 归一化，嘴在画面底部。
  */
 export function sampleArc(aimX, force, scatter = 0, aimY = 0) {
-  const mouthX = 0.5 + aimX * 0.03;
-  const mouthY = 0.97;
-  const targetX = 0.5 + aimX * 0.36 + scatter;
-  // 键盘大致在画面中下部
-  const targetY = 0.72 + aimY * 0.12 - force * 0.025;
-  const flight = 0.42;
+  const lookDown = Math.max(0, Math.min(1, (aimY + 1) * 0.5));
+  const mouthX = 0.5 + aimX * 0.02;
+  const mouthY = 0.94;
+  // 近处键盘带大约 0.70–0.86；抬头落点上移，到不了键
+  const targetX = 0.5 + aimX * (0.16 + lookDown * 0.12) + scatter;
+  const targetY = 0.42 + lookDown * 0.38 - force * 0.015;
+  // 低头：短抛；抬头：弧线拉长但仍偏上
+  const flight = 0.16 + (1 - lookDown) * 0.14;
+  const lift = 0.25 + lookDown * 0.35;
   const vx = (targetX - mouthX) / flight;
-  const vy0 = (targetY - mouthY) / flight - 0.85 * force;
-  const g = 2.1;
+  const vy0 = (targetY - mouthY) / flight - lift * force;
+  const g = 1.8 + lookDown * 0.6;
   const pts = [];
-  for (let t = 0; t <= flight; t += 0.03) {
+  for (let t = 0; t <= flight; t += 0.02) {
     pts.push({
       x: mouthX + vx * t,
       y: mouthY + vy0 * t + 0.5 * g * t * t,
@@ -74,13 +78,27 @@ export function sampleArc(aimX, force, scatter = 0, aimY = 0) {
   return pts;
 }
 
+function aimTarget(aimX, aimY, force, scatter = 0) {
+  const lookDown = Math.max(0, Math.min(1, (aimY + 1) * 0.5));
+  return {
+    lookDown,
+    mouthX: 0.5 + aimX * 0.02,
+    mouthY: 0.94,
+    targetX: 0.5 + aimX * (0.16 + lookDown * 0.12) + scatter,
+    targetY: 0.42 + lookDown * 0.38 - force * 0.015,
+    flight: 0.16 + (1 - lookDown) * 0.14,
+    lift: 0.25 + lookDown * 0.35,
+    g: 1.8 + lookDown * 0.6,
+  };
+}
+
 export function createColdGame(ui) {
   const state = {
     phase: "practice",
     running: false,
     finished: false,
-    aimX: 0, // -1..1 左右
-    aimY: 0, // -1..1 上下（负=看向键盘上方）
+    aimX: 0, // -1..1 偏航
+    aimY: 0.85, // -1..1 俯仰：+低头看近键盘 / -抬头喷空
     holding: false,
     holdTime: 0,
     // 蓄力 0..1，满格才喷（最大强度）
@@ -264,29 +282,28 @@ export function createColdGame(ui) {
     state.previewForce = force;
     state.lastBurst = { kind, forced, scatter, force, goo, big };
 
-    const mouthX = 0.5 + state.aimX * 0.03;
-    const mouthY = 0.97;
-    const targetY = 0.72 + state.aimY * 0.12 - force * 0.025;
-    const targetX = 0.5 + state.aimX * 0.36;
-    const g = 2.1;
+    const a = aimTarget(state.aimX, state.aimY, force, 0);
+    const g = a.g;
 
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
-      const tx = Math.max(0.08, Math.min(0.92, targetX + spread));
-      const ty = Math.max(
-        0.55,
-        Math.min(0.9, targetY + (Math.random() - 0.5) * scatter * 0.35),
-      );
-      const flight = goo === "spit" ? 0.38 : 0.42 + Math.random() * 0.06;
-      const vx = (tx - mouthX) / flight;
-      const vy = (ty - mouthY) / flight - 0.85 * force;
+      const tx = Math.max(0.12, Math.min(0.88, a.targetX + spread));
+      // 低头才锁在近键盘带；抬头允许偏上（喷空）
+      const tyRaw = a.targetY + (Math.random() - 0.5) * scatter * 0.25;
+      const ty =
+        a.lookDown > 0.55
+          ? Math.max(0.62, Math.min(0.9, tyRaw))
+          : Math.max(0.28, Math.min(0.7, tyRaw));
+      const flight = a.flight * (0.92 + Math.random() * 0.1);
+      const vx = (tx - a.mouthX) / flight;
+      const vy = (ty - a.mouthY) / flight - a.lift * force;
       state.projectiles.push({
-        x: mouthX,
-        y: mouthY,
+        x: a.mouthX,
+        y: a.mouthY,
         vx,
         vy,
         goo,
-        life: 0.85,
+        life: 0.55,
         age: 0,
         g,
         landed: false,
@@ -300,9 +317,9 @@ export function createColdGame(ui) {
   }
 
   function landOnKeys(x, y, goo) {
-    let hits = ui.hitTest?.(x, y);
-    if (!hits || !hits.length) hits = estimateKeys(x, y);
-    if (!hits.length) return;
+    // 只认真实键位命中，禁止整屏估算乱触发
+    const hits = ui.hitTest?.(x, y);
+    if (!hits || !hits.length) return;
 
     const now = performance.now() / 1000;
     const def = GOO[goo] || GOO.cough;
@@ -316,7 +333,6 @@ export function createColdGame(ui) {
       }
     }
 
-    // 一次性：打中立刻灌字母，污渍 0.5s 后自己没
     pushLetters(primary);
     ui.onStain?.(state);
   }
@@ -328,19 +344,6 @@ export function createColdGame(ui) {
     list.push(stain);
     state.stains.set(letter, list);
     stainOrder.push(stain);
-  }
-
-  function estimateKeys(x, y) {
-    const band = ui.getKeyBand?.() || { top: 0.55, bot: 0.9 };
-    if (y < band.top - 0.02 || y > band.bot + 0.02) return [];
-    const t = (y - band.top) / Math.max(0.01, band.bot - band.top);
-    const row = Math.min(2, Math.max(0, Math.floor(t * 3)));
-    const rowStr = ROWS[row];
-    const col = Math.max(
-      0,
-      Math.min(rowStr.length - 1, Math.floor(x * rowStr.length)),
-    );
-    return [rowStr[col]];
   }
 
   function wipePhone() {
@@ -441,7 +444,7 @@ export function createColdGame(ui) {
       running: true,
       finished: false,
       aimX: 0,
-      aimY: 0,
+      aimY: 0.7,
       holding: false,
       holdTime: 0,
       coughCharge: 0.7,
