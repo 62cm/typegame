@@ -283,6 +283,124 @@
       #ver-switch:hover {
         border-color: #888;
       }
+      .mode-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 12px 0 14px;
+      }
+      .mode-row button {
+        flex: 1;
+        min-width: 90px;
+      }
+      .mode-row button.active {
+        background: #2a1818;
+        border-color: #8a3030;
+        color: #f0d0d0;
+      }
+      #key-trap-panel {
+        position: absolute;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        z-index: 8;
+        width: min(420px, calc(100% - 24px));
+        background: rgba(20, 8, 8, 0.92);
+        border: 1px solid #6a2020;
+        padding: 10px 12px;
+        pointer-events: none;
+      }
+      #key-trap-panel.hidden {
+        display: none;
+      }
+      #key-trap-panel .trap-title {
+        font-size: 12px;
+        color: #f0a0a0;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      #key-trap-panel .kb-row {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 4px;
+      }
+      #key-trap-panel .kb-key {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        background: #1a1a1e;
+        border: 1px solid #333;
+        color: #bbb;
+        text-transform: uppercase;
+      }
+      #key-trap-panel .kb-key.locked {
+        background: #4a1010;
+        border-color: #c23b3b;
+        color: #ff6a6a;
+        box-shadow: inset 0 0 0 1px #c23b3b;
+      }
+      #jiugong-panel {
+        position: absolute;
+        inset: 10% 8% 18%;
+        z-index: 7;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        pointer-events: auto;
+      }
+      #jiugong-panel.hidden {
+        display: none;
+      }
+      #jiugong-panel .jg-hint {
+        font-size: 14px;
+        color: #e6e2da;
+        text-align: center;
+        text-shadow: 0 1px 4px #000;
+        max-width: 520px;
+      }
+      #jiugong-panel .jg-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        width: min(420px, 90vw);
+      }
+      #jiugong-panel .jg-cell {
+        position: relative;
+        aspect-ratio: 1;
+        padding: 6px;
+        background: rgba(20, 20, 24, 0.85);
+        border: 1px solid #444;
+        cursor: pointer;
+        color: inherit;
+      }
+      #jiugong-panel .jg-cell:hover {
+        border-color: #8a3030;
+        background: rgba(40, 20, 20, 0.9);
+      }
+      #jiugong-panel .jg-cell svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #jiugong-panel .jg-num {
+        position: absolute;
+        left: 4px;
+        top: 2px;
+        font-size: 11px;
+        color: #888;
+      }
+      #jiugong-panel .jg-keys {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      #type-panel.jiugong-mode #type-input {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -291,12 +409,17 @@
     <div class="overlay" id="overlay">
       <div class="card">
         <h1>不可转头 · 卡通版</h1>
-        <p>鬼在屏幕正前方逼近。用中文输入法打字逼退它们。</p>
+        <p>鬼在屏幕正前方逼近。必须对上每一个字才能过关（不能凑字数）。</p>
+        <div class="mode-row" id="mode-row">
+          <button type="button" data-mode="classic" class="active">经典打字</button>
+          <button type="button" data-mode="story">剧情模式</button>
+          <button type="button" data-mode="jiugong">九宫模式</button>
+        </div>
         <ul>
-          <li><b>涂黑字</b>：前一个字打出后才显示，请记住上下文。</li>
-          <li><b>打叉字</b>：绝对不能打对；打对/打错都会招鬼。用<strong>空格跳过</strong>。</li>
-          <li><b>凑字数</b>：即使打错，累计字数够一段也能过关（没被抓住的话）。</li>
-          <li><b>二周目</b>：通关一次后，每打对一字，文末会多涂黑一个字（打错不涂）。</li>
+          <li><b>经典</b>：涂黑字 / 打叉字（空格跳过）/ 输入陷阱（红键封锁，靠联想绕过）。</li>
+          <li><b>剧情</b>：鬼会讲生平、喜恶；后面必须原样打出她说过的内容。</li>
+          <li><b>九宫</b>：屏幕显示 9 张鬼脸，按提示选出她正在做的那张（数字键 1–9）。对了后退，超时/选错逼近。</li>
+          <li><b>二周目</b>：通关后，每打对一字，文末会多涂黑一个字。</li>
         </ul>
         <button class="primary" id="btn-start" type="button">面对它</button>
       </div>
@@ -323,7 +446,8 @@
         <div id="topbar">
           <div class="stat">波次 <b id="wave">1</b></div>
           <div class="stat">完成 <b id="cleared">0</b></div>
-          <div class="stat">字数 <b id="fill-stat">0/0</b></div>
+          <div class="stat">对位 <b id="fill-stat">0/0</b></div>
+          <div class="stat">模式 <b id="mode-label">经典</b></div>
           <div class="stat danger">鬼 <b id="ghost-count">1</b></div>
           <div class="stat danger">距离 <b id="proximity">远</b></div>
           <div id="ng-badge" class="hidden">二周目 · 末尾涂黑</div>
@@ -333,7 +457,9 @@
           <div id="ghost-layer"></div>
           <div id="vignette"></div>
           <div id="threat-flash"></div>
-          <div id="lock-note">视角已锁定 · 打叉字按空格跳过</div>
+          <div id="key-trap-panel" class="hidden"></div>
+          <div id="jiugong-panel" class="hidden"></div>
+          <div id="lock-note">视角已锁定 · 必须对上每一个字 · 打叉字按空格</div>
         </div>
 
         <div id="type-panel">
@@ -361,7 +487,7 @@
     </div>
 
     <script type="module">
-      import { createGameController } from "./mechanics.js";
+      import { createGameController, loadMeta } from "./mechanics.js";
 
       const PARAS = [
         "别回头。灯在抖，走廊尽头有人站着，可你明明锁了门。",
@@ -377,6 +503,8 @@
         "窗外没有风，窗帘却动了。字打完之前，假装那是错觉。",
         "你越害怕，手指越滑。冷静。正确比速度更能救你。",
       ];
+
+      const typePanel = document.getElementById("type-panel");
 
       const dom = {
         overlay: document.getElementById("overlay"),
@@ -395,11 +523,14 @@
         streak: document.getElementById("streak"),
         timerFill: document.getElementById("timer-fill"),
         fillStat: document.getElementById("fill-stat"),
+        modeLabel: document.getElementById("mode-label"),
         ngBadge: document.getElementById("ng-badge"),
         goMsg: document.getElementById("go-msg"),
         ghostLayer: document.getElementById("ghost-layer"),
         flash: document.getElementById("threat-flash"),
         shake: document.getElementById("shake"),
+        keyTrapPanel: document.getElementById("key-trap-panel"),
+        jiugongPanel: document.getElementById("jiugong-panel"),
       };
 
       function ghostSvg(seed) {
@@ -415,7 +546,18 @@
       }
 
       function renderGhosts(state) {
+        typePanel.classList.toggle("jiugong-mode", state.mode === "jiugong");
         dom.ghostLayer.innerHTML = "";
+        if (state.mode === "jiugong") {
+          dom.shake.style.transform = "none";
+          dom.flash.style.background =
+            state.wrongFlash > 0
+              ? `rgba(140, 20, 20, ${Math.min(0.35, state.wrongFlash)})`
+              : state.near > 0.8
+                ? `rgba(80, 0, 0, ${(state.near - 0.8) * 0.9})`
+                : "rgba(140, 20, 20, 0)";
+          return;
+        }
         const n = state.ghosts;
         for (let i = 0; i < n; i++) {
           const g = document.createElement("div");
@@ -450,13 +592,25 @@
         onHud: (state) => renderGhosts(state),
       });
 
+      const saved = loadMeta();
+      game.setMode(saved.mode || "classic");
+      document.querySelectorAll("#mode-row button").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === game.state.mode);
+        btn.onclick = () => {
+          game.setMode(btn.dataset.mode);
+          document.querySelectorAll("#mode-row button").forEach((b) => {
+            b.classList.toggle("active", b === btn);
+          });
+        };
+      });
+
       game.bindInput();
       document.getElementById("btn-start").onclick = () => game.startGame();
       document.getElementById("btn-retry").onclick = () => game.startGame();
       document.getElementById("btn-next").onclick = () => game.nextWave();
 
-      document.getElementById("type-panel").addEventListener("mousedown", (e) => {
-        if (e.target !== dom.typeInput && game.state.running) {
+      typePanel.addEventListener("mousedown", (e) => {
+        if (e.target !== dom.typeInput && game.state.running && game.state.mode !== "jiugong") {
           e.preventDefault();
           dom.typeInput.focus();
         }
