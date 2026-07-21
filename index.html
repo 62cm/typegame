@@ -227,10 +227,17 @@
         background: rgba(0, 0, 0, 0.82);
         display: grid;
         place-items: center;
-        z-index: 20;
+        z-index: 1000;
+        pointer-events: auto;
       }
       .overlay.hidden {
         display: none;
+        pointer-events: none;
+      }
+      .overlay .card {
+        position: relative;
+        z-index: 1001;
+        pointer-events: auto;
       }
       .card {
         width: min(500px, calc(100vw - 32px));
@@ -271,11 +278,17 @@
         width: 100%;
         height: 100%;
       }
+      /* 开局/结算菜单显示时，禁止下层游戏区抢点击 */
+      body:has(#overlay:not(.hidden)) #shake,
+      body:has(#gameover:not(.hidden)) #shake,
+      body:has(#clear:not(.hidden)) #shake {
+        pointer-events: none;
+      }
       #ver-switch {
         position: fixed;
         right: 14px;
         bottom: 14px;
-        z-index: 30;
+        z-index: 1100;
         padding: 10px 12px;
         background: #1a1a22;
         border: 1px solid #444;
@@ -407,43 +420,6 @@
     </style>
   </head>
   <body>
-    <a id="ver-switch" href="monitor.html">切换真人版</a>
-
-    <div class="overlay" id="overlay">
-      <div class="card">
-        <h1>不可转头 · 卡通版</h1>
-        <p>鬼在屏幕正前方逼近。必须对上每一个字才能过关（不能凑字数）。</p>
-        <div class="mode-row" id="mode-row">
-          <button type="button" data-mode="classic" class="active">经典打字</button>
-          <button type="button" data-mode="story">剧情模式</button>
-          <button type="button" data-mode="jiugong">九宫模式</button>
-        </div>
-        <ul>
-          <li><b>经典</b>：涂黑字 / 打叉字（这里要填字，但不能填原字，随便填别的覆盖）/ 红键封锁陷阱。</li>
-          <li><b>剧情</b>：鬼会讲生平、喜恶；后面必须原样打出她说过的内容。</li>
-          <li><b>九宫</b>：屏幕显示 9 张鬼脸，按提示选出她正在做的那张（数字键 1–9）。对了后退，超时/选错逼近。</li>
-          <li><b>二周目</b>：通关后，每打对一字，文末会多涂黑一个字。</li>
-        </ul>
-        <button class="primary" id="btn-start" type="button">面对它</button>
-      </div>
-    </div>
-
-    <div class="overlay hidden" id="gameover">
-      <div class="card">
-        <h2>它碰到你了</h2>
-        <p id="go-msg"></p>
-        <button class="primary" id="btn-retry" type="button">再来一次</button>
-      </div>
-    </div>
-
-    <div class="overlay hidden" id="clear">
-      <div class="card">
-        <h2>暂时安全</h2>
-        <p id="clear-hint">你清空了视野里的鬼。</p>
-        <button class="primary" id="btn-next" type="button">继续</button>
-      </div>
-    </div>
-
     <div id="shake">
       <div id="stage">
         <div id="topbar">
@@ -489,9 +465,48 @@
       </div>
     </div>
 
+    <a id="ver-switch" href="monitor.html">切换真人版</a>
+
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <h1>不可转头 · 卡通版</h1>
+        <p>鬼在屏幕正前方逼近。必须对上每一个字才能过关（不能凑字数）。</p>
+        <p id="boot-error" class="hidden" style="color: #ff8a8a"></p>
+        <div class="mode-row" id="mode-row">
+          <button type="button" data-mode="classic" class="active">经典打字</button>
+          <button type="button" data-mode="story">剧情模式</button>
+          <button type="button" data-mode="jiugong">九宫模式</button>
+        </div>
+        <ul>
+          <li><b>经典</b>：涂黑字 / 打叉字（这里要填字，但不能填原字，随便填别的覆盖）/ 红键封锁陷阱。</li>
+          <li><b>剧情</b>：鬼会讲生平、喜恶；后面必须原样打出她说过的内容。</li>
+          <li><b>九宫</b>：屏幕显示 9 张鬼脸，按提示选出她正在做的那张（数字键 1–9）。对了后退，超时/选错逼近。</li>
+          <li><b>二周目</b>：通关后，每打对一字，文末会多涂黑一个字。</li>
+        </ul>
+        <button class="primary" id="btn-start" type="button">面对它</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="gameover">
+      <div class="card">
+        <h2>它碰到你了</h2>
+        <p id="go-msg"></p>
+        <button class="primary" id="btn-retry" type="button">再来一次</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="clear">
+      <div class="card">
+        <h2>暂时安全</h2>
+        <p id="clear-hint">你清空了视野里的鬼。</p>
+        <button class="primary" id="btn-next" type="button">继续</button>
+      </div>
+    </div>
+
     <script type="module">
       import { createGameController, loadMeta } from "./mechanics.js";
 
+      const bootError = document.getElementById("boot-error");
       const PARAS = [
         "别回头。灯在抖，走廊尽头有人站着，可你明明锁了门。",
         "键盘是唯一还听你话的东西。打完这段，它就会退一步。",
@@ -589,45 +604,61 @@
               : "rgba(140, 20, 20, 0)";
       }
 
-      const game = createGameController({
-        paragraphs: PARAS,
-        getEls: () => dom,
-        onHud: (state) => renderGhosts(state),
-      });
+      let game;
+      try {
+        game = createGameController({
+          paragraphs: PARAS,
+          getEls: () => dom,
+          onHud: (state) => renderGhosts(state),
+        });
 
-      const saved = loadMeta();
-      game.setMode(saved.mode || "classic");
-      document.querySelectorAll("#mode-row button").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.mode === game.state.mode);
-        btn.onclick = () => {
-          game.setMode(btn.dataset.mode);
-          document.querySelectorAll("#mode-row button").forEach((b) => {
-            b.classList.toggle("active", b === btn);
+        const saved = loadMeta();
+        game.setMode(saved.mode || "classic");
+
+        document.querySelectorAll("#mode-row button").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mode === game.state.mode);
+          btn.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            game.setMode(btn.dataset.mode);
+            document.querySelectorAll("#mode-row button").forEach((b) => {
+              b.classList.toggle("active", b === btn);
+            });
           });
-        };
-      });
+        });
 
-      game.bindInput();
-      document.getElementById("btn-start").onclick = () => game.startGame();
-      document.getElementById("btn-retry").onclick = () => game.startGame();
-      document.getElementById("btn-next").onclick = () => game.nextWave();
+        game.bindInput();
+        document.getElementById("btn-start").addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          game.startGame();
+        });
+        document.getElementById("btn-retry").addEventListener("click", () => game.startGame());
+        document.getElementById("btn-next").addEventListener("click", () => game.nextWave());
 
-      typePanel.addEventListener("mousedown", (e) => {
-        if (e.target !== dom.typeInput && game.state.running && game.state.mode !== "jiugong") {
-          e.preventDefault();
-          dom.typeInput.focus();
+        typePanel.addEventListener("mousedown", (e) => {
+          if (e.target !== dom.typeInput && game.state.running && game.state.mode !== "jiugong") {
+            e.preventDefault();
+            dom.typeInput.focus();
+          }
+        });
+
+        let last = performance.now();
+        function loop(now) {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          game.tick(dt);
+          requestAnimationFrame(loop);
         }
-      });
-
-      let last = performance.now();
-      function loop(now) {
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        game.tick(dt);
+        game.syncHud();
         requestAnimationFrame(loop);
+      } catch (err) {
+        console.error(err);
+        if (bootError) {
+          bootError.classList.remove("hidden");
+          bootError.textContent = "脚本加载失败：" + (err && err.message ? err.message : String(err));
+        }
       }
-      game.syncHud();
-      requestAnimationFrame(loop);
     </script>
   </body>
 </html>
