@@ -792,8 +792,8 @@
         <h1>感冒模式</h1>
         <p>四肢石膏，只能控<strong>方向</strong>和<strong>憋气</strong>。蓄满才以最大强度喷出。</p>
         <ul>
-          <li><b>咳嗽 / 喷嚏</b>都是<strong>单发</strong>：一发只出一个字母</li>
-          <li><b>憋气满 3s</b>才爆<strong>唾沫星子</strong>（可粘键组合多字母）</li>
+          <li><b>咳嗽 / 喷嚏 / 唾沫</b>都是<strong>单发</strong>：打中出字，污渍 <b>0.5 秒</b>消失</li>
+          <li><b>憋气满 3s</b>才爆<strong>唾沫星子</strong>（散射多字母）</li>
           <li>小喷嚏清水鼻涕；每第 3 个大喷嚏黄鼻涕</li>
           <li><b>点绿色语音条</b>（50–60″）→ 解锁<strong>中文</strong>；键盘喷拼音字母，凑齐就出汉字</li>
           <li>鼠标转视角瞄准 · 先练空手机</li>
@@ -1245,8 +1245,8 @@
           screen.classList.toggle("practice-empty", practice);
           document.getElementById("phase").textContent = practice ? "练习" : "交报告";
           document.getElementById("kb-hint").textContent = practice
-            ? "空手机：看黄色抛物线，蓄满自动喷到键盘上"
-            : "点老板语音条解锁文字 · 喷射凑拼音出字";
+            ? "空手机练习：蓄满喷到键盘上"
+            : "绿语音条解锁中文 · 喷拼音字母出汉字";
           btnStartPlay.classList.toggle("hidden", !practice);
           resizeFx();
         },
@@ -1269,7 +1269,7 @@
           const u = report.slice(0, state.revealedEnd);
           document.getElementById("reveal").innerHTML = u
             ? escapeHtml(u)
-            : `<span class="ghost">点老板语音条 → 这里出现要打的字</span>`;
+            : `<span class="ghost">点绿色语音条 → 这里出现中文</span>`;
         },
         onBubbles: fillBubbles,
         onPracticeHit(state, hits) {
