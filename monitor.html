@@ -339,22 +339,24 @@
       }
       #article .trap {
         position: relative;
-        color: #c07070;
+        color: #c8e0d0;
+        text-decoration: line-through;
+        text-decoration-color: rgba(220, 70, 70, 0.9);
+        text-decoration-thickness: 1.5px;
       }
       #article .trap .trap-x {
         position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        color: #e04040;
-        font-size: 1.05em;
+        right: -0.12em;
+        top: -0.15em;
+        color: #ff5555;
+        font-size: 0.45em;
         font-weight: 700;
         pointer-events: none;
-        text-shadow: 0 0 4px rgba(200, 0, 0, 0.6);
         line-height: 1;
+        text-shadow: 0 0 2px rgba(80, 0, 0, 0.8);
       }
       #article .trap.done .trap-x {
-        opacity: 0.35;
+        opacity: 0.3;
       }
 
       #stand {
@@ -659,7 +661,7 @@
           <button type="button" data-mode="jiugong">九宫模式</button>
         </div>
         <ul class="rules">
-          <li><b>经典</b>：涂黑 / 打叉（空格跳过）/ 红键封锁陷阱（靠联想绕过）。</li>
+          <li><b>经典</b>：涂黑 / 打叉（必须填字但不能填原字，用别的字覆盖）/ 红键封锁陷阱。</li>
           <li><b>剧情</b>：鬼讲生平喜恶，后面必须原样打出她说过的内容。</li>
           <li><b>九宫</b>：屏上 9 张鬼脸，选出她正在做的那张（数字键 1–9）。</li>
           <li><b>二周目</b>：通关后每打对一字，文末涂黑一字。</li>
@@ -741,7 +743,7 @@
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
-              placeholder="用中文输入法在这里打字"
+              placeholder="中文输入法；打叉位填别的字覆盖，不能打原字"
             />
             <div id="timer-bar"><div id="timer-fill"></div></div>
           </div>

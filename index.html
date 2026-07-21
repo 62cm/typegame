@@ -150,18 +150,21 @@
       }
       #prompt .trap {
         position: relative;
-        color: #c07070;
+        color: #e8d0d0;
+        text-decoration: line-through;
+        text-decoration-color: rgba(220, 60, 60, 0.85);
+        text-decoration-thickness: 1.5px;
       }
       #prompt .trap-x {
         position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -55%);
-        color: #ff4d4d;
-        font-size: 1.1em;
+        right: -0.15em;
+        top: -0.2em;
+        color: #ff5a5a;
+        font-size: 0.48em;
         font-weight: 700;
         pointer-events: none;
-        text-shadow: 0 0 4px #400;
+        line-height: 1;
+        text-shadow: 0 0 2px #300;
       }
       #typed-box {
         margin-bottom: 8px;
@@ -416,7 +419,7 @@
           <button type="button" data-mode="jiugong">九宫模式</button>
         </div>
         <ul>
-          <li><b>经典</b>：涂黑字 / 打叉字（空格跳过）/ 输入陷阱（红键封锁，靠联想绕过）。</li>
+          <li><b>经典</b>：涂黑字 / 打叉字（这里要填字，但不能填原字，随便填别的覆盖）/ 红键封锁陷阱。</li>
           <li><b>剧情</b>：鬼会讲生平、喜恶；后面必须原样打出她说过的内容。</li>
           <li><b>九宫</b>：屏幕显示 9 张鬼脸，按提示选出她正在做的那张（数字键 1–9）。对了后退，超时/选错逼近。</li>
           <li><b>二周目</b>：通关后，每打对一字，文末会多涂黑一个字。</li>
@@ -459,7 +462,7 @@
           <div id="threat-flash"></div>
           <div id="key-trap-panel" class="hidden"></div>
           <div id="jiugong-panel" class="hidden"></div>
-          <div id="lock-note">视角已锁定 · 必须对上每一个字 · 打叉字按空格</div>
+          <div id="lock-note">视角已锁定 · 打叉位要填别的字盖住，不能打原字</div>
         </div>
 
         <div id="type-panel">
@@ -474,7 +477,7 @@
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
-            placeholder="中文输入法打字；打叉字按空格跳过"
+            placeholder="中文输入法；打叉位填任意别的字覆盖"
           />
           <div id="meta">
             <span>进度 <b id="progress">0%</b></span>

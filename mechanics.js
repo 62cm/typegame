@@ -1,6 +1,6 @@
 /**
  * Shared typing-horror mechanics for cartoon + monitor versions.
- * 通关唯一条件：对上每一个必打字（打叉字用空格跳过）。无凑字数。
+ * 通关：每个位置都要填上字。打叉位必须填「别的字」，不能打原字。无凑字数。
  */
 
 import { getStoryParagraphs, GHOST_PROFILE } from "./story.js";
@@ -170,7 +170,7 @@ export function createGameController(opts) {
   function timeFor(text) {
     if (state.mode === "jiugong") return 0;
     const cps = Math.max(1.2, 1.85 - state.wave * 0.07) * timeScale;
-    return Math.min(140, Math.max(28, text.length / cps + 6));
+    return Math.min(120, Math.max(22, text.length / cps + 5));
   }
 
   function refreshTarget() {
@@ -402,70 +402,64 @@ export function createGameController(opts) {
     }
   }
 
-  function skipTrap() {
-    if (!state.running || state.mode === "jiugong") return;
-    if (!state.flags.trap[state.index]) return;
-    state.typed += "·";
-    advanceCorrect();
-    const e = els();
-    if (e.typeInput) e.typeInput.value = state.typed;
-    state.lastJudged = state.typed;
-    renderTyped();
-    refreshTarget();
-    syncHud();
-    if (state.index >= state.text.length) {
-      if (e.typeInput) e.typeInput.value = "";
-      completeParagraph();
-    }
-  }
-
   function judgeCommitted(raw) {
     if (!state.running || state.mode === "jiugong") return;
     const target = state.text;
     const e = els();
 
-    if (state.flags.trap[state.index]) {
-      const next = raw.slice(state.typed.length);
-      if (next.length === 0) return;
-      if (raw !== state.lastJudged) {
-        onWrong();
-        state.lastJudged = raw;
-      }
+    // typed 是已接受序列（打叉位会是「覆盖字」，与原文不同）
+    if (raw.length < state.typed.length) {
       if (e.typeInput) e.typeInput.value = state.typed;
-      renderTyped(next.slice(0, 8));
+      renderTyped();
+      return;
+    }
+    if (!raw.startsWith(state.typed)) {
+      if (raw !== state.lastJudged) onWrong();
+      state.lastJudged = state.typed;
+      if (e.typeInput) e.typeInput.value = state.typed;
+      renderTyped(raw.slice(0, 8));
       refreshTarget();
       syncHud();
       return;
     }
 
-    let prefix = 0;
-    const limit = Math.min(raw.length, target.length);
-    while (prefix < limit && raw[prefix] === target[prefix]) {
-      if (state.flags.trap[prefix] && prefix >= state.index) break;
-      prefix++;
-    }
+    const incoming = raw.slice(state.typed.length);
+    if (!incoming) return;
 
-    const correct = target.slice(0, prefix);
-    const wrongTail = raw.slice(prefix);
+    for (const ch of incoming) {
+      if (state.index >= target.length) break;
+      const forbidden = target[state.index];
+      const isTrap = state.flags.trap[state.index];
 
-    if (wrongTail.length > 0) {
-      if (raw !== state.lastJudged) {
-        onWrong();
-        state.lastJudged = raw;
+      if (isTrap) {
+        // 打叉位：必须填一个字，但不能是原字
+        if (ch === forbidden) {
+          if (raw !== state.lastJudged) onWrong();
+          state.lastJudged = state.typed;
+          if (e.typeInput) e.typeInput.value = state.typed;
+          renderTyped(ch);
+          refreshTarget();
+          syncHud();
+          return;
+        }
+        state.typed += ch;
+        advanceCorrect();
+      } else if (ch === forbidden) {
+        state.typed += ch;
+        advanceCorrect();
+      } else {
+        if (raw !== state.lastJudged) onWrong();
+        state.lastJudged = state.typed;
+        if (e.typeInput) e.typeInput.value = state.typed;
+        renderTyped(ch);
+        refreshTarget();
+        syncHud();
+        return;
       }
-      state.typed = state.text.slice(0, state.index);
-      if (e.typeInput) e.typeInput.value = state.typed;
-      renderTyped(wrongTail.slice(0, 8));
-      refreshTarget();
-      syncHud();
-      return;
     }
 
-    while (state.index < prefix) {
-      advanceCorrect();
-    }
-    state.typed = correct;
-    state.lastJudged = correct;
+    state.lastJudged = state.typed;
+    if (e.typeInput) e.typeInput.value = state.typed;
     renderTyped();
     refreshTarget();
     syncHud();
@@ -526,7 +520,7 @@ export function createGameController(opts) {
   }
 
   function completeParagraph() {
-    // 仅当每一个必打位置都对上（含空格跳过的打叉字）才到这里
+    // 仅当每个位置都填完（打叉位为合法覆盖字）才到这里
     state.cleared += 1;
     state.typed = "";
     state.composing = "";
@@ -702,12 +696,6 @@ export function createGameController(opts) {
         }
       }
 
-      if (ev.key === " " || ev.code === "Space") {
-        if (state.flags.trap[state.index] && !state.imeComposing) {
-          ev.preventDefault();
-          skipTrap();
-        }
-      }
     };
 
     input.addEventListener("keydown", onKeyDown);
@@ -745,15 +733,22 @@ export function createGameController(opts) {
     }
 
     state.time -= dt;
+    state.near = Math.min(
+      1,
+      state.near + dt * (0.01 + state.ghosts * 0.0038 + state.wave * 0.0012),
+    );
+
     if (state.time <= 0) {
-      approach(0.1);
-      state.time = Math.min(12, state.timeMax * 0.35);
-      if (!state.running) return;
+      state.time = 0;
+      state.near = Math.min(1, state.near + 0.16);
+      if (state.near >= 1) fail("时间到了。它抓住你了。");
+      else {
+        if (state.ghosts < 5) state.ghosts += 1;
+        state.time = Math.max(8, state.timeMax * 0.32);
+      }
     }
 
-    // 缓慢逼近
-    state.near = Math.min(0.98, state.near + dt * (0.008 + state.wave * 0.001));
-    if (state.near >= 1) fail("你太慢了，它贴上来了。");
+    if (state.near >= 1) fail("它碰到你了。");
 
     syncHud();
   }
