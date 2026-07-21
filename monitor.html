@@ -585,82 +585,6 @@
         border-color: #c23b3b;
         color: #ff6a6a;
       }
-      #jiugong-panel {
-        position: absolute;
-        right: 8px;
-        top: 42px;
-        bottom: 8px;
-        z-index: 5;
-        width: 150px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 6px;
-        background: rgba(5, 12, 10, 0.9);
-        border: 1px solid #2a4a38;
-        pointer-events: auto;
-        overflow: auto;
-      }
-      #jiugong-panel.hidden {
-        display: none;
-      }
-      #jiugong-panel .jg-title {
-        font-size: 10px;
-        letter-spacing: 0.08em;
-        color: #7a9a88;
-        text-align: center;
-      }
-      #jiugong-panel .jg-hint {
-        font-size: 10px;
-        color: var(--phosphor);
-        text-align: center;
-        line-height: 1.35;
-      }
-      #jiugong-panel .jg-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 3px;
-      }
-      #jiugong-panel .jg-cell {
-        position: relative;
-        aspect-ratio: 1;
-        padding: 1px 1px 12px;
-        background: #0a1410;
-        border: 1px solid #2a4a38;
-        cursor: pointer;
-        color: inherit;
-      }
-      #jiugong-panel .jg-cell:hover {
-        border-color: #8a3030;
-      }
-      #jiugong-panel .jg-cell svg {
-        width: 100%;
-        height: auto;
-        display: block;
-      }
-      #jiugong-panel .jg-en {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        text-align: center;
-        font-size: 7px;
-        letter-spacing: 0.03em;
-        color: #8ab89a;
-        font-family: Consolas, monospace;
-      }
-      #jiugong-panel .jg-num {
-        position: absolute;
-        left: 2px;
-        top: 0;
-        font-size: 8px;
-        color: #5a7a68;
-      }
-      #jiugong-panel .jg-keys {
-        font-size: 9px;
-        color: var(--muted);
-        text-align: center;
-      }
       #screen {
         position: relative;
       }
@@ -677,12 +601,10 @@
         <div class="mode-row" id="mode-row">
           <button type="button" data-mode="classic" class="active">经典打字</button>
           <button type="button" data-mode="story">剧情模式</button>
-          <button type="button" data-mode="jiugong">九宫模式</button>
         </div>
         <ul class="rules">
           <li><b>经典</b>：涂黑 / 打叉（必须填字但不能填原字，用别的字覆盖）/ 红键封锁陷阱。</li>
           <li><b>剧情</b>：鬼讲生平喜恶，后面必须原样打出她说过的内容。</li>
-          <li><b>九宫</b>：照常打字；屏上参考板（英文）对照反光里鬼脸，按对应格。</li>
           <li><b>二周目</b>：通关后每打对一字，文末涂黑一字。</li>
         </ul>
         <button class="primary" id="btn-start" type="button">坐下，别回头</button>
@@ -743,7 +665,6 @@
                   <div id="key-trap-panel" class="hidden"></div>
                   <div id="article"></div>
                 </div>
-                <div id="jiugong-panel" class="hidden"></div>
               </div>
             </div>
             <div id="stand"></div>
@@ -819,7 +740,6 @@
           ngBadge: document.getElementById("ng-badge"),
           goMsg: document.getElementById("go-msg"),
           keyTrapPanel: document.getElementById("key-trap-panel"),
-          jiugongPanel: document.getElementById("jiugong-panel"),
           presence,
           glass,
           desk,
