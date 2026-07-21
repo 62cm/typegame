@@ -51,18 +51,19 @@ export function payTier(elapsedSec) {
 }
 
 /**
- * 预览抛物线（归一化坐标）
- * aimX: -1..1 左右视线；aimY: -1..1 上下视线（负=抬头看键盘上沿）
+ * 预览抛物线（归一化坐标，相对 stage/view-port）
+ * 手机不动；鼠标只改落点瞄准键盘区
  */
 export function sampleArc(aimX, force, scatter = 0, aimY = 0) {
-  const mouthX = 0.5 + aimX * 0.05;
-  const mouthY = 0.9;
-  const targetX = 0.5 + aimX * 0.42 + scatter;
-  const targetY = 0.5 + aimY * 0.22 - force * 0.04;
-  const flight = 0.55;
+  const mouthX = 0.5 + aimX * 0.03;
+  const mouthY = 0.97;
+  const targetX = 0.5 + aimX * 0.36 + scatter;
+  // 键盘大致在画面中下部
+  const targetY = 0.72 + aimY * 0.12 - force * 0.025;
+  const flight = 0.42;
   const vx = (targetX - mouthX) / flight;
-  const vy0 = (targetY - mouthY) / flight - 0.95 * force;
-  const g = 2.25;
+  const vy0 = (targetY - mouthY) / flight - 0.85 * force;
+  const g = 2.1;
   const pts = [];
   for (let t = 0; t <= flight; t += 0.03) {
     pts.push({
@@ -263,29 +264,29 @@ export function createColdGame(ui) {
     state.previewForce = force;
     state.lastBurst = { kind, forced, scatter, force, goo, big };
 
-    const mouthX = 0.5 + state.aimX * 0.05;
-    const mouthY = 0.9;
-    const targetY = 0.5 + state.aimY * 0.22 - force * 0.04;
-    const targetX = 0.5 + state.aimX * 0.42;
-    const g = 2.25;
+    const mouthX = 0.5 + state.aimX * 0.03;
+    const mouthY = 0.97;
+    const targetY = 0.72 + state.aimY * 0.12 - force * 0.025;
+    const targetX = 0.5 + state.aimX * 0.36;
+    const g = 2.1;
 
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
-      const tx = Math.max(0.06, Math.min(0.94, targetX + spread));
+      const tx = Math.max(0.08, Math.min(0.92, targetX + spread));
       const ty = Math.max(
-        0.22,
-        Math.min(0.62, targetY + (Math.random() - 0.5) * scatter * 0.4),
+        0.55,
+        Math.min(0.9, targetY + (Math.random() - 0.5) * scatter * 0.35),
       );
-      const flight = goo === "spit" ? 0.35 : 0.45 + Math.random() * 0.08;
+      const flight = goo === "spit" ? 0.38 : 0.42 + Math.random() * 0.06;
       const vx = (tx - mouthX) / flight;
-      const vy = (ty - mouthY) / flight - 0.95 * force;
+      const vy = (ty - mouthY) / flight - 0.85 * force;
       state.projectiles.push({
         x: mouthX,
         y: mouthY,
         vx,
         vy,
         goo,
-        life: goo === "spit" || goo === "cough" ? 0.5 : 0.7,
+        life: 0.85,
         age: 0,
         g,
         landed: false,
@@ -330,18 +331,10 @@ export function createColdGame(ui) {
   }
 
   function estimateKeys(x, y) {
-    // 键盘大致在 stage 中上部
-    if (y < 0.22 || y > 0.62) return [];
-    const rowYs = [0.34, 0.42, 0.5];
-    let row = 0;
-    let best = 99;
-    for (let i = 0; i < 3; i++) {
-      const d = Math.abs(y - rowYs[i]);
-      if (d < best) {
-        best = d;
-        row = i;
-      }
-    }
+    const band = ui.getKeyBand?.() || { top: 0.55, bot: 0.9 };
+    if (y < band.top - 0.02 || y > band.bot + 0.02) return [];
+    const t = (y - band.top) / Math.max(0.01, band.bot - band.top);
+    const row = Math.min(2, Math.max(0, Math.floor(t * 3)));
     const rowStr = ROWS[row];
     const col = Math.max(
       0,
@@ -557,16 +550,24 @@ export function createColdGame(ui) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
-      // 穿过键盘带时落地
-      const bandTop = 0.28;
-      const bandBot = 0.58;
+      // 穿过真实键盘带时落地（由 UI 提供归一化范围）
+      const band = ui.getKeyBand?.() || { top: 0.55, bot: 0.9 };
+      const bandTop = band.top;
+      const bandBot = band.bot;
       const crossed =
         !p.landed &&
         p.vy > 0 &&
         prevY < bandBot &&
         p.y >= bandTop &&
-        p.y <= bandBot + 0.08;
-      if (crossed || (!p.landed && p.y >= bandTop && p.y <= bandBot && p.vy > 0 && p.age > 0.12)) {
+        p.y <= bandBot + 0.1;
+      if (
+        crossed ||
+        (!p.landed &&
+          p.y >= bandTop &&
+          p.y <= bandBot &&
+          p.vy > 0 &&
+          p.age > 0.08)
+      ) {
         p.landed = true;
         landOnKeys(p.x, Math.min(bandBot, Math.max(bandTop, p.y)), p.goo);
         continue;

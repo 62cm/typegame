@@ -172,44 +172,45 @@
         font-weight: 700;
       }
 
+      /* 手机固定居中，四周留边，绝不顶出画框 */
       .stage {
-        position: relative;
-        width: min(430px, 96vw);
-        height: min(740px, calc(100dvh - 210px));
-        flex: none;
-        margin: 0 auto;
+        position: fixed;
+        left: 50%;
+        top: 48%;
+        transform: translate(-50%, -50%);
+        width: min(340px, 78vw);
+        height: min(560px, calc(100dvh - 210px));
+        z-index: 10;
+        margin: 0;
       }
-      /* 竖屏手机：加大，但不是平板全屏 */
       .view-port {
         position: relative;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        border-radius: 18px;
+        border-radius: 20px;
         background:
           radial-gradient(ellipse at 50% 0%, #4a4034 0%, transparent 55%),
           linear-gradient(180deg, #2a241c 0%, #12100e 100%);
         border: 1px solid #3a342c;
+        box-sizing: border-box;
+        padding: 14px 16px;
       }
       .look-cam {
-        position: absolute;
-        inset: 0;
+        position: relative;
+        width: 100%;
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transform-style: preserve-3d;
-        transform-origin: 50% 50%;
+        transform: none !important;
       }
       .phone-wrap {
         position: relative;
-        left: auto;
-        top: auto;
-        width: 94%;
-        height: 96%;
-        margin: 0 auto;
-        transform: none;
-        transform-style: preserve-3d;
-        transform-origin: 50% 50%;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        transform: none !important;
       }
       #fx {
         position: absolute;
@@ -225,9 +226,10 @@
         display: flex;
         flex-direction: column;
         background: var(--bezel);
-        border-radius: 34px;
-        padding: 10px 9px 12px;
-        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
+        border-radius: 28px;
+        padding: 8px 7px 10px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
+        box-sizing: border-box;
       }
       .notch {
         flex-shrink: 0;
@@ -630,10 +632,13 @@
       }
 
       .body-rig {
-        position: relative;
+        position: fixed;
+        left: 50%;
+        bottom: 8px;
+        transform: translateX(-50%);
         z-index: 28;
-        width: min(430px, 96vw);
-        margin: 8px auto 0;
+        width: min(400px, 92vw);
+        margin: 0;
         display: grid;
         grid-template-columns: 1fr 1.5fr 1fr;
         gap: 6px;
@@ -979,11 +984,20 @@
         fx._box = { left: r.left, top: r.top, w, h };
       }
 
-      /** 手机固定居中；鼠标只改瞄准抛物线，不挪手机 */
-      function applyLook(_state) {
-        lookCam.style.transform = "none";
-        const wrap = document.getElementById("phone-wrap");
-        if (wrap) wrap.style.transform = "none";
+      /** 手机永远不动；只更新瞄准，不碰任何 transform */
+      function applyLook() {}
+
+      function getKeyBand() {
+        const box = fx._box;
+        const kb = document.getElementById("kb-wrap");
+        if (!box || !kb) return { top: 0.58, bot: 0.92 };
+        const r = kb.getBoundingClientRect();
+        const top = (r.top - box.top) / box.h;
+        const bot = (r.bottom - box.top) / box.h;
+        return {
+          top: Math.max(0.35, Math.min(0.85, top - 0.02)),
+          bot: Math.max(0.5, Math.min(0.98, bot + 0.02)),
+        };
       }
 
       function buildKeyboard() {
@@ -1247,6 +1261,7 @@
 
       const game = createColdGame({
         hitTest,
+        getKeyBand,
         onPhase(state) {
           const practice = state.phase === "practice";
           screen.classList.toggle("practice-empty", practice);
