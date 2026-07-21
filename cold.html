@@ -172,7 +172,7 @@
         font-weight: 700;
       }
 
-      /* 画框内的手机 + 俯仰/偏航视角（只转视角，不另挪手机） */
+      /* 画框 + 真视角：旋转摄像机看前方固定手机 */
       .stage {
         position: fixed;
         left: 50%;
@@ -189,8 +189,8 @@
         height: 100%;
         overflow: hidden;
         border-radius: 20px;
-        perspective: 760px;
-        perspective-origin: 50% 92%;
+        perspective: 900px;
+        perspective-origin: 50% 48%;
         background:
           radial-gradient(ellipse at 50% 0%, #4a4034 0%, transparent 55%),
           linear-gradient(180deg, #2a241c 0%, #12100e 100%);
@@ -201,20 +201,18 @@
         position: absolute;
         inset: 0;
         transform-style: preserve-3d;
-        transform-origin: 50% 100%;
+        transform-origin: 50% 48%;
         will-change: transform;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
       .phone-wrap {
-        position: relative;
-        width: 86%;
-        height: 88%;
-        margin: 0 auto;
-        transform: translateZ(28px) rotateX(14deg);
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 78%;
+        height: 82%;
+        transform: translate(-50%, -50%) translateZ(-220px) rotateX(8deg);
         transform-style: preserve-3d;
-        transform-origin: 50% 100%;
+        transform-origin: 50% 50%;
       }
       #fx {
         position: absolute;
@@ -308,15 +306,17 @@
       }
       .chat {
         flex: 1 1 auto;
-        min-height: 160px;
-        max-height: 42%;
+        min-height: 120px;
+        max-height: 36%;
         overflow-y: auto;
+        overscroll-behavior: contain;
         padding: 10px 10px 8px;
         background: #dce5ec;
         border-bottom: 1px solid #c0ccd6;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        touch-action: pan-y;
       }
       .msg {
         display: flex;
@@ -532,8 +532,8 @@
       }
       .key.wide,
       .key.space {
-        pointer-events: auto;
-        cursor: pointer;
+        pointer-events: none;
+        cursor: default;
       }
       .key.wide {
         flex: 1.4 1 0;
@@ -818,8 +818,9 @@
           <li><b>咳嗽 / 喷嚏 / 唾沫</b>都是<strong>单发</strong>：打中出字，污渍 <b>0.5 秒</b>消失</li>
           <li><b>憋气满 3s</b>才爆<strong>唾沫星子</strong>（散射多字母）</li>
           <li>小喷嚏清水鼻涕；每第 3 个大喷嚏黄鼻涕</li>
-          <li><b>点绿色语音条</b>（50–60″）→ 解锁<strong>中文</strong>；键盘喷拼音字母，凑齐就出汉字</li>
-          <li>鼠标控制<strong>俯仰+偏航</strong>：低头近抛打键盘，抬头喷空；只认键面命中</li>
+          <li><b>绿色语音条</b>＝领导口述（含废话）；废话不用打，只打稿子里的句子</li>
+          <li>只能靠<strong>喷射落键</strong>打拼音；点语音/滚动不能打字</li>
+          <li>鼠标<strong>俯仰+偏航</strong>转视角；喷向近处手机键面</li>
         </ul>
         <button type="button" id="btn-practice">先练喷射</button>
       </div>
@@ -830,6 +831,7 @@
         <h2>报告交上去了</h2>
         <p id="win-tier"></p>
         <div class="win-amt" id="win-amt"></div>
+        <p id="win-score"></p>
         <p id="win-time"></p>
         <button type="button" id="btn-again">再来</button>
       </div>
@@ -917,7 +919,7 @@
       </div>
       <div class="mouth-zone" id="mouth">
         <div class="mouth-face" id="mouth-face">😮</div>
-        <div class="title">口鼻 · 俯仰/偏航瞄准近处键盘</div>
+        <div class="title">口鼻 · 俯仰低头看键盘 · 往上喷手机</div>
         <div class="hold-meter"><i id="hold-fill"></i></div>
         <div class="ops">空格 / 按住下方 = 憋气（满 3s 大散射）</div>
         <button type="button" class="btn-hold" id="btn-hold">按住憋气</button>
@@ -930,6 +932,7 @@
 
     <script type="module">
       import { createColdGame, ROWS, sampleArc } from "./cold.js";
+      import { playCough, playSneeze, playSpitBurst } from "./cold-sfx.js";
 
       const stage = document.getElementById("stage");
       const viewPort = document.getElementById("view-port");
@@ -988,11 +991,11 @@
         fx._box = { left: r.left, top: r.top, w, h };
       }
 
-      /** 只转视角：俯仰 + 偏航；手机不另做平移 */
+      /** 旋转摄像机俯仰/偏航；手机固定在前方 translateZ */
       function applyLook(state) {
-        // aimY+ = 低头看近处键盘；aimY- = 抬头
-        const pitch = Math.max(2, Math.min(22, 10 + state.aimY * 10));
-        const yaw = Math.max(-14, Math.min(14, -state.aimX * 14));
+        // aimY+（鼠标偏下）= 低头看键盘；aimY- = 抬头看聊天
+        const pitch = Math.max(-18, Math.min(10, -state.aimY * 14));
+        const yaw = Math.max(-16, Math.min(16, state.aimX * 14));
         lookCam.style.transform = `rotateX(${pitch}deg) rotateY(${yaw}deg)`;
       }
 
@@ -1028,16 +1031,14 @@
         });
         const util = document.createElement("div");
         util.className = "kb-row";
-        const bk = document.createElement("button");
-        bk.type = "button";
+        const bk = document.createElement("div");
         bk.className = "key wide";
         bk.textContent = "⌫";
-        bk.onclick = () => game.backspace();
-        const sp = document.createElement("button");
-        sp.type = "button";
+        bk.title = "点按无效：擦屏可清空拼音缓冲";
+        const sp = document.createElement("div");
         sp.className = "key space";
         sp.textContent = "space";
-        sp.onclick = () => game.space();
+        sp.title = "点按无效：只能喷射打字";
         util.append(bk, sp);
         kb.appendChild(util);
       }
@@ -1186,7 +1187,7 @@
           html += `<span class="pending">${escapeHtml(report.slice(typed.length, unlocked))}</span>`;
         }
         if (unlocked < report.length) {
-          html += `<span class="ghost">（点绿色语音条解锁中文）</span>`;
+          html += `<span class="ghost">（点语音解锁要打的句）</span>`;
         }
         const py = state.needHint || "";
         const han = state.needChar || "";
@@ -1195,12 +1196,12 @@
         if (unlocked > typed.length && han) {
           pyLine = `<span class="han">${escapeHtml(han)}</span>拼音 ${escapeHtml(buf || "·")} / ${escapeHtml(py)}`;
         } else if (unlocked <= typed.length && unlocked < report.length) {
-          pyLine = "先点上面<strong>绿色语音条</strong>";
+          pyLine = "先点绿色语音听口述";
         }
         if (pyLine) {
-          html += `<div class="py-hint">${pyLine}${state.bufferError ? " · 错了按 ⌫" : ""}</div>`;
+          html += `<div class="py-hint">${pyLine}${state.bufferError ? " · 错了请擦屏清空" : ""}</div>`;
         }
-        el.innerHTML = html || `<span class="pending">点绿色语音条 → 解锁中文报告</span>`;
+        el.innerHTML = html || `<span class="pending">点语音听口述 · 只打稿子句</span>`;
         document.getElementById("emit").textContent = state.lastEmit || "";
       }
 
@@ -1226,7 +1227,13 @@
               `<span class="tag">语音</span>` +
               `<span class="dur">${dur}″</span>` +
               `<span class="hint">点我</span>`;
-            bar.onclick = () => game.unlockSegment(i);
+            bar.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              game.unlockSegment(i);
+            });
+            bar.addEventListener("mousedown", (e) => e.stopPropagation());
+            bar.addEventListener("pointerdown", (e) => e.stopPropagation());
             row.append(av, bar);
             box.appendChild(row);
           });
@@ -1256,10 +1263,15 @@
           screen.classList.toggle("practice-empty", practice);
           document.getElementById("phase").textContent = practice ? "练习" : "交报告";
           document.getElementById("kb-hint").textContent = practice
-            ? "低头看键盘近抛 · 抬头喷空 · 只认键面"
-            : "绿语音条解锁中文 · 俯仰对准键盘再喷";
+            ? "低头看键盘 · 往上喷到手机键 · 只有喷射能出字"
+            : "听语音抓稿子句 · 废话别打 · 喷射凑拼音";
           btnStartPlay.classList.toggle("hidden", !practice);
           resizeFx();
+        },
+        onSfx(kind, info) {
+          if (kind === "sneeze") playSneeze(!!info?.big);
+          else if (kind === "spitburst" || info?.forced) playSpitBurst();
+          else playCough();
         },
         onBurst(state) {
           const b = state.lastBurst;
@@ -1270,7 +1282,8 @@
           if (b?.forced) msg = "憋不住！大力散射 ";
           if (b?.kind === "sneeze") {
             msg += b.big ? "大喷嚏·黄鼻涕" : "小喷嚏·清水鼻涕";
-          } else msg += "咳嗽·唾沫星子";
+          } else if (b?.forced) msg += "唾沫星子";
+          else msg += "咳嗽·飞沫";
           document.getElementById("emit").textContent = msg + ` · 强度 ${((b?.force || 1) * 100) | 0}%`;
         },
         onStain: paintStains,
@@ -1279,8 +1292,8 @@
           const report = game.REPORT;
           const u = report.slice(0, state.revealedEnd);
           document.getElementById("reveal").innerHTML = u
-            ? escapeHtml(u)
-            : `<span class="ghost">点绿色语音条 → 这里出现中文</span>`;
+            ? `<b>要打的稿：</b>${escapeHtml(u)}`
+            : `<span class="ghost">点绿色语音听口述 → 这里只显示要打的句子（废话不显示）</span>`;
         },
         onBubbles: fillBubbles,
         onPracticeHit(state, hits) {
@@ -1290,7 +1303,7 @@
           if (state.practiceHits >= 6) btnStartPlay.classList.remove("hidden");
         },
         onWipe() {
-          document.getElementById("emit").textContent = "石膏胳膊抹掉了屏上的鼻涕…";
+          document.getElementById("emit").textContent = "擦屏 · 拼音缓冲已清空";
         },
         onVoice(line, i, replay) {
           speak(line);
@@ -1298,11 +1311,10 @@
           if (b) {
             b.classList.add("speaking");
             setTimeout(() => b.classList.remove("speaking"), 1800);
-            b.scrollIntoView({ block: "nearest", behavior: "smooth" });
           }
           document.getElementById("emit").textContent = replay
-            ? `（重听）老板语音 ${i + 1}`
-            : `老板语音 ${i + 1} · 已解锁文字`;
+            ? `（重听）口述 ${i + 1} · 废话不用打`
+            : `口述 ${i + 1} · 已解锁要打的句子`;
         },
         onTick(state) {
           updateMeters(state);
@@ -1317,10 +1329,11 @@
           document.getElementById("tier-1000").classList.toggle("on", state.phase === "play" && e > 180 && e <= 300);
           document.getElementById("tier-100").classList.toggle("on", state.phase === "play" && e > 300);
         },
-        onWin(state, pay) {
+        onWin(state, pay, score = 0) {
           document.getElementById("win").classList.remove("hidden");
           document.getElementById("win-tier").textContent = `${pay.label} · ${pay.tip}`;
           document.getElementById("win-amt").textContent = `¥ ${pay.amount}`;
+          document.getElementById("win-score").textContent = `对照满分稿评分：${score} / 100`;
           document.getElementById("win-time").textContent = `用时 ${fmt(state.elapsed)}`;
         },
       });
@@ -1328,12 +1341,11 @@
       buildKeyboard();
 
       function aimFromPointer(clientX, clientY) {
-        // 相对画框：映射为俯仰/偏航，不是 2D 平铺全屏乱瞄
         const r = viewPort.getBoundingClientRect();
         if (r.width < 1 || r.height < 1) return;
         const nx = ((clientX - r.left) / r.width - 0.5) * 2;
         const ny = ((clientY - r.top) / r.height - 0.5) * 2;
-        // 鼠标偏下 = 低头看近键盘（aimY+）
+        // 鼠标偏下 = 低头（aimY+）
         game.setAim(
           Math.max(-1, Math.min(1, nx)),
           Math.max(-1, Math.min(1, ny)),
@@ -1349,6 +1361,14 @@
           if (e.touches[0]) aimFromPointer(e.touches[0].clientX, e.touches[0].clientY);
         },
         { passive: true },
+      );
+      // 禁止页面滚动干扰；聊天区内部仍可滚
+      window.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.target.closest?.(".chat")) e.preventDefault();
+        },
+        { passive: false },
       );
 
       function holdOn(e) {

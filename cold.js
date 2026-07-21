@@ -7,10 +7,12 @@
 
 import {
   REPORT,
+  FULL_SCORE,
   VOICE_LINES,
   SEGMENTS,
   fullPyList,
   charsUnlockedByVoice,
+  scoreTyped,
 } from "./cold-content.js";
 
 export const ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
@@ -51,44 +53,37 @@ export function payTier(elapsedSec) {
 }
 
 /**
- * 近抛抛物线：俯仰 aimY 决定看近处键盘还是抬头喷空。
- * aimY=+1 低头看键盘（近）；aimY=-1 抬头（远/喷空）
- * 坐标：view-port 归一化，嘴在画面底部。
+ * 嘴在下方，往上近抛到手机（拿着手机就该喷在手机上）。
+ * aimY+ 瞄键盘区；aimY- 瞄屏幕上部；始终落在手机范围内。
  */
 export function sampleArc(aimX, force, scatter = 0, aimY = 0) {
-  const lookDown = Math.max(0, Math.min(1, (aimY + 1) * 0.5));
-  const mouthX = 0.5 + aimX * 0.02;
-  const mouthY = 0.94;
-  // 近处键盘带大约 0.70–0.86；抬头落点上移，到不了键
-  const targetX = 0.5 + aimX * (0.16 + lookDown * 0.12) + scatter;
-  const targetY = 0.42 + lookDown * 0.38 - force * 0.015;
-  // 低头：短抛；抬头：弧线拉长但仍偏上
-  const flight = 0.16 + (1 - lookDown) * 0.14;
-  const lift = 0.25 + lookDown * 0.35;
-  const vx = (targetX - mouthX) / flight;
-  const vy0 = (targetY - mouthY) / flight - lift * force;
-  const g = 1.8 + lookDown * 0.6;
+  const a = aimTarget(aimX, aimY, force, scatter);
+  const vx = (a.targetX - a.mouthX) / a.flight;
+  const vy0 = (a.targetY - a.mouthY) / a.flight - a.lift * force;
   const pts = [];
-  for (let t = 0; t <= flight; t += 0.02) {
+  for (let t = 0; t <= a.flight; t += 0.02) {
     pts.push({
-      x: mouthX + vx * t,
-      y: mouthY + vy0 * t + 0.5 * g * t * t,
+      x: a.mouthX + vx * t,
+      y: a.mouthY + vy0 * t + 0.5 * a.g * t * t,
     });
   }
   return pts;
 }
 
 function aimTarget(aimX, aimY, force, scatter = 0) {
-  const lookDown = Math.max(0, Math.min(1, (aimY + 1) * 0.5));
+  const look = Math.max(-1, Math.min(1, aimY));
+  const mouthX = 0.5 + aimX * 0.03;
+  const mouthY = 0.96;
+  const targetX = 0.5 + aimX * 0.22 + scatter;
+  const targetY = Math.max(0.28, Math.min(0.82, 0.52 + look * 0.22 - force * 0.01));
   return {
-    lookDown,
-    mouthX: 0.5 + aimX * 0.02,
-    mouthY: 0.94,
-    targetX: 0.5 + aimX * (0.16 + lookDown * 0.12) + scatter,
-    targetY: 0.42 + lookDown * 0.38 - force * 0.015,
-    flight: 0.16 + (1 - lookDown) * 0.14,
-    lift: 0.25 + lookDown * 0.35,
-    g: 1.8 + lookDown * 0.6,
+    mouthX,
+    mouthY,
+    targetX,
+    targetY,
+    flight: 0.2,
+    lift: 0.55,
+    g: 1.35,
   };
 }
 
@@ -98,7 +93,7 @@ export function createColdGame(ui) {
     running: false,
     finished: false,
     aimX: 0, // -1..1 偏航
-    aimY: 0.85, // -1..1 俯仰：+低头看近键盘 / -抬头喷空
+    aimY: 0.55, // -1..1 俯仰：+低头看键盘 / -抬头看聊天
     holding: false,
     holdTime: 0,
     // 蓄力 0..1，满格才喷（最大强度）
@@ -202,7 +197,7 @@ export function createColdGame(ui) {
     if (state.phase !== "play") return;
 
     if (state.bufferError) {
-      state.lastEmit = "(先 ⌫ 删掉错拼音)";
+      state.lastEmit = "(拼音错了：擦屏清空缓冲)";
       ui.onTyped?.(state);
       return;
     }
@@ -287,15 +282,14 @@ export function createColdGame(ui) {
 
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
-      const tx = Math.max(0.12, Math.min(0.88, a.targetX + spread));
-      // 低头才锁在近键盘带；抬头允许偏上（喷空）
-      const tyRaw = a.targetY + (Math.random() - 0.5) * scatter * 0.25;
-      const ty =
-        a.lookDown > 0.55
-          ? Math.max(0.62, Math.min(0.9, tyRaw))
-          : Math.max(0.28, Math.min(0.7, tyRaw));
-      const flight = a.flight * (0.92 + Math.random() * 0.1);
+      const tx = Math.max(0.14, Math.min(0.86, a.targetX + spread));
+      const ty = Math.max(
+        0.28,
+        Math.min(0.84, a.targetY + (Math.random() - 0.5) * scatter * 0.2),
+      );
+      const flight = a.flight * (0.94 + Math.random() * 0.08);
       const vx = (tx - a.mouthX) / flight;
+      // 往上喷到手机：初速向上（vy 为负）
       const vy = (ty - a.mouthY) / flight - a.lift * force;
       state.projectiles.push({
         x: a.mouthX,
@@ -303,7 +297,7 @@ export function createColdGame(ui) {
         vx,
         vy,
         goo,
-        life: 0.55,
+        life: 0.65,
         age: 0,
         g,
         landed: false,
@@ -313,6 +307,7 @@ export function createColdGame(ui) {
       });
     }
 
+    ui.onSfx?.(kind, { forced, big, goo });
     ui.onBurst?.(state);
   }
 
@@ -352,9 +347,14 @@ export function createColdGame(ui) {
     clearStains();
     spitSig = "";
     state.projectiles = [];
+    state.buffer = "";
+    state.bufferError = false;
     state.wipeCd = 8;
+    state.lastEmit = "擦屏 · 拼音缓冲已清";
+    refreshNeed();
     ui.onWipe?.(state);
     ui.onStain?.(state);
+    ui.onTyped?.(state);
     return true;
   }
 
@@ -407,23 +407,9 @@ export function createColdGame(ui) {
     unlockSegment(next);
   }
 
-  function backspace() {
-    if (!state.running || state.finished) return;
-    if (state.phase === "practice") return;
-    if (state.buffer.length > 0) {
-      state.buffer = state.buffer.slice(0, -1);
-      state.bufferError = false;
-      state.lastEmit = "⌫";
-      refreshNeed();
-      ui.onTyped?.(state);
-      return;
-    }
-    // 已提交正文不回退（避免刷进度）
-  }
-
-  function space() {
-    // 标点自动写入，无需喷射空格
-  }
+  /** 点按键盘不能打字；错拼音用擦屏清空缓冲 */
+  function backspace() {}
+  function space() {}
 
   function checkWin() {
     if (
@@ -434,7 +420,8 @@ export function createColdGame(ui) {
       state.finished = true;
       state.running = false;
       state.phase = "done";
-      ui.onWin?.(state, payTier(state.elapsed));
+      const score = scoreTyped(state.typed);
+      ui.onWin?.(state, payTier(state.elapsed), score);
     }
   }
 
@@ -444,7 +431,7 @@ export function createColdGame(ui) {
       running: true,
       finished: false,
       aimX: 0,
-      aimY: 0.7,
+      aimY: 0.55,
       holding: false,
       holdTime: 0,
       coughCharge: 0.7,
@@ -496,6 +483,8 @@ export function createColdGame(ui) {
       lastEmit: "点绿色语音条 → 解锁中文",
       needHint: "",
       needChar: "",
+      aimX: 0,
+      aimY: 0.55,
     });
     spitSig = "";
     state.nextSneezeBig = peekSneezeBig();
@@ -553,29 +542,26 @@ export function createColdGame(ui) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
-      // 穿过真实键盘带时落地（由 UI 提供归一化范围）
-      const band = ui.getKeyBand?.() || { top: 0.55, bot: 0.9 };
+      // 从嘴往上喷到手机：进入键盘带即落地（不再要求 vy>0 下落）
+      const band = ui.getKeyBand?.() || { top: 0.55, bot: 0.88 };
       const bandTop = band.top;
       const bandBot = band.bot;
-      const crossed =
-        !p.landed &&
-        p.vy > 0 &&
-        prevY < bandBot &&
-        p.y >= bandTop &&
-        p.y <= bandBot + 0.1;
+      const inBand = p.y >= bandTop && p.y <= bandBot;
+      const enteredFromBelow = prevY > bandBot && p.y <= bandBot;
+      const enteredFromAbove = prevY < bandTop && p.y >= bandTop;
       if (
-        crossed ||
-        (!p.landed &&
-          p.y >= bandTop &&
-          p.y <= bandBot &&
-          p.vy > 0 &&
-          p.age > 0.08)
+        !p.landed &&
+        p.age > 0.05 &&
+        (enteredFromBelow || enteredFromAbove || (inBand && p.age > 0.1))
       ) {
         p.landed = true;
-        landOnKeys(p.x, Math.min(bandBot, Math.max(bandTop, p.y)), p.goo);
+        if (inBand || enteredFromBelow || enteredFromAbove) {
+          const ly = Math.min(bandBot, Math.max(bandTop, p.y));
+          landOnKeys(p.x, ly, p.goo);
+        }
         continue;
       }
-      if (p.life > 0 && p.y < 1.1) remain.push(p);
+      if (p.life > 0 && p.y > -0.05 && p.y < 1.15) remain.push(p);
     }
     state.projectiles = remain;
 
@@ -596,11 +582,13 @@ export function createColdGame(ui) {
     tick,
     sampleArc,
     REPORT,
+    FULL_SCORE,
     VOICE_LINES,
     SEGMENTS,
     GOO,
     ROWS,
     payTier,
+    scoreTyped,
     COUGH_PERIOD,
     SNEEZE_PERIOD,
     HOLD_MAX,
