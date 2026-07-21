@@ -4,7 +4,11 @@
  */
 
 import { getStoryParagraphs, GHOST_PROFILE } from "./story.js";
-import { createJiugongRound, faceSvg } from "./jiugong.js";
+import {
+  createReferenceBoard,
+  createJiugongChallenge,
+  faceSvg,
+} from "./jiugong.js";
 
 export function loadMeta() {
   try {
@@ -168,7 +172,6 @@ export function createGameController(opts) {
   }
 
   function timeFor(text) {
-    if (state.mode === "jiugong") return 0;
     const cps = Math.max(1.2, 1.85 - state.wave * 0.07) * timeScale;
     return Math.min(120, Math.max(22, text.length / cps + 5));
   }
@@ -177,10 +180,6 @@ export function createGameController(opts) {
     const e = els();
     const node = e.prompt || e.article;
     if (!node) return;
-    if (state.mode === "jiugong") {
-      node.innerHTML = "";
-      return;
-    }
     node.innerHTML = renderTargetHtml(
       state.text,
       state.index,
@@ -201,10 +200,6 @@ export function createGameController(opts) {
   function renderTyped(extraWrong = "") {
     const e = els();
     if (!e.typedBox) return;
-    if (state.mode === "jiugong") {
-      e.typedBox.innerHTML = `<span class="placeholder">九宫模式：点选或按小键盘 1–9 / 主键盘对应方向</span>`;
-      return;
-    }
     if (!state.typed && !state.composing && !extraWrong) {
       e.typedBox.innerHTML = `<span class="placeholder">在这里输入…</span>`;
       return;
@@ -218,7 +213,7 @@ export function createGameController(opts) {
   }
 
   let keyTrapHudSig = "";
-  let jiugongHudId = -1;
+  let jiugongBoardBuilt = false;
 
   function renderKeyTrapHud() {
     const e = els();
@@ -255,26 +250,26 @@ export function createGameController(opts) {
     const panel = e.jiugongPanel;
     if (!panel) return;
     if (state.mode !== "jiugong" || !state.jiugong) {
-      if (jiugongHudId !== -1) {
+      if (jiugongBoardBuilt) {
         panel.classList.add("hidden");
         panel.innerHTML = "";
-        jiugongHudId = -1;
+        jiugongBoardBuilt = false;
       }
       return;
     }
     const j = state.jiugong;
     panel.classList.remove("hidden");
-    // 只在新一轮重建九宫，避免每帧重绘打断点击
-    if (j.id !== jiugongHudId) {
-      jiugongHudId = j.id;
-      let html = `<div class="jg-hint"></div><div class="jg-grid">`;
-      j.cells.forEach((cell, i) => {
-        html += `<button type="button" class="jg-cell" data-slot="${i}" aria-label="格子${i + 1}">
-          ${faceSvg(cell.kind, cell.seed)}
-          <span class="jg-num">${i + 1}</span>
+    if (!jiugongBoardBuilt) {
+      jiugongBoardBuilt = true;
+      let html = `<div class="jg-title">表情参考 REF</div><div class="jg-hint"></div><div class="jg-grid">`;
+      j.board.forEach((cell) => {
+        html += `<button type="button" class="jg-cell" data-slot="${cell.slot}" aria-label="${cell.en}">
+          ${faceSvg(cell.zh, cell.seed, { compact: true })}
+          <span class="jg-en">${escapeHtml(cell.en)}</span>
+          <span class="jg-num">${cell.num}</span>
         </button>`;
       });
-      html += `</div><div class="jg-keys">键位：7 8 9 / 4 5 6 / 1 2 3（小键盘或主键盘数字）</div>`;
+      html += `</div><div class="jg-keys">对照鬼的脸 → 按对应格 / 数字键</div>`;
       panel.innerHTML = html;
       panel.querySelectorAll(".jg-cell").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -282,9 +277,14 @@ export function createGameController(opts) {
         });
       });
     }
+    const ch = j.challenge;
     const hint = panel.querySelector(".jg-hint");
     if (hint) {
-      hint.textContent = `她正在做「${j.correctKind}」脸 · 在九宫答案里找出有她这张脸的格子 · 剩余 ${j.time.toFixed(1)}s`;
+      if (ch && ch.cooldown <= 0) {
+        hint.textContent = `看鬼的脸 → 在参考板按对应格 · ${ch.time.toFixed(1)}s`;
+      } else {
+        hint.textContent = "继续打字 · 下一轮表情即将出现";
+      }
     }
   }
 
@@ -294,38 +294,27 @@ export function createGameController(opts) {
     if (e.cleared) e.cleared.textContent = String(state.cleared);
     if (e.ghostCount) e.ghostCount.textContent = String(state.ghosts);
     if (e.proximity) e.proximity.textContent = proximityLabel(state.near);
-    if (e.timeLeft) {
-      e.timeLeft.textContent =
-        state.mode === "jiugong" && state.jiugong
-          ? state.jiugong.time.toFixed(1)
-          : state.time.toFixed(1);
-    }
+    if (e.timeLeft) e.timeLeft.textContent = state.time.toFixed(1);
     if (e.streak) e.streak.textContent = String(state.streak);
     if (e.progress) {
-      if (state.mode === "jiugong") {
-        e.progress.textContent = "—";
-      } else {
-        const need = state.text.length || 1;
-        const p = Math.floor((state.index / need) * 100);
-        e.progress.textContent = Math.min(100, p) + "%";
-      }
+      const need = state.text.length || 1;
+      const p = Math.floor((state.index / need) * 100);
+      e.progress.textContent = Math.min(100, p) + "%";
     }
     if (e.timerFill) {
-      const ratio =
-        state.mode === "jiugong" && state.jiugong
-          ? state.jiugong.time / state.jiugong.timeMax
-          : state.timeMax
-            ? state.time / state.timeMax
-            : 0;
+      const ratio = state.timeMax ? state.time / state.timeMax : 0;
       e.timerFill.style.transform = `scaleX(${Math.max(0, ratio)})`;
     }
     if (e.ngBadge) e.ngBadge.classList.toggle("hidden", !state.ngPlus);
     if (e.fillStat) {
-      e.fillStat.textContent =
-        state.mode === "jiugong"
-          ? "九宫"
-          : `${state.index}/${state.text.length}`;
+      e.fillStat.textContent = `${state.index}/${state.text.length}`;
     }
+    // 给画面层用：鬼当前表情
+    const ch = state.jiugong?.challenge;
+    state.ghostFace =
+      state.mode === "jiugong" && ch && ch.cooldown <= 0 ? ch.correctKind : null;
+    state.ghostFaceEn =
+      state.mode === "jiugong" && ch && ch.cooldown <= 0 ? ch.correctEn : null;
     if (e.modeLabel) {
       e.modeLabel.textContent =
         state.mode === "story"
@@ -341,7 +330,6 @@ export function createGameController(opts) {
 
   function focusInput() {
     const e = els();
-    if (state.mode === "jiugong") return;
     requestAnimationFrame(() => e.typeInput?.focus());
   }
 
@@ -379,7 +367,6 @@ export function createGameController(opts) {
   }
 
   function maybeSpawnKeyTrap() {
-    if (state.mode === "jiugong") return;
     if (state.keyTrap) return;
     if (state.near < 0.28) return;
     if (Math.random() < 0.004 + state.near * 0.01) {
@@ -403,7 +390,7 @@ export function createGameController(opts) {
   }
 
   function judgeCommitted(raw) {
-    if (!state.running || state.mode === "jiugong") return;
+    if (!state.running) return;
     const target = state.text;
     const e = els();
 
@@ -470,52 +457,43 @@ export function createGameController(opts) {
     }
   }
 
-  function pickJiugong(slot) {
-    if (!state.running || state.mode !== "jiugong" || !state.jiugong) return;
-    const cell = state.jiugong.cells[slot];
-    if (!cell) return;
-    if (cell.correct) {
-      retreat(0.22);
-      state.cleared += 1;
-      if (state.ghosts > 1) {
-        state.ghosts -= 1;
-        startJiugongRound();
-      } else if (state.near < 0.14) {
-        state.running = false;
-        markClearedOnce();
-        state.clearedOnce = true;
-        const e = els();
-        e.clear?.classList.remove("hidden");
-        if (e.clearHint) {
-          e.clearHint.textContent = "九宫里她笑了，退到门后。下次可开二周目涂黑。";
-        }
-        setNgPlus(true);
-        state.ngPlus = true;
-        syncHud();
-        onCompleteRun?.(state);
-      } else {
-        startJiugongRound();
-      }
-    } else {
-      approach(0.14);
-      if (state.running) startJiugongRound();
+  function ensureJiugong() {
+    if (state.mode !== "jiugong") {
+      state.jiugong = null;
+      return;
+    }
+    if (!state.jiugong) {
+      state.jiugong = {
+        board: createReferenceBoard(),
+        challenge: null,
+        challengeSeed: 1,
+      };
     }
   }
 
-  function startJiugongRound() {
-    state.jiugong = createJiugongRound(
-      state.wave * 97 + state.cleared * 13 + 11,
+  function startFaceChallenge() {
+    ensureJiugong();
+    if (!state.jiugong) return;
+    state.jiugong.challengeSeed += 1;
+    state.jiugong.challenge = createJiugongChallenge(
+      state.wave * 97 + state.cleared * 13 + state.jiugong.challengeSeed,
     );
-    state.text = "";
-    state.index = 0;
-    state.typed = "";
-    const e = els();
-    if (e.typeInput) {
-      e.typeInput.value = "";
-      e.typeInput.disabled = true;
+  }
+
+  function pickJiugong(slot) {
+    if (!state.running || state.mode !== "jiugong" || !state.jiugong) return;
+    const ch = state.jiugong.challenge;
+    if (!ch || ch.cooldown > 0) return;
+    if (slot === ch.correctSlot) {
+      retreat(0.2);
+      if (state.ghosts > 1 && Math.random() < 0.35) state.ghosts -= 1;
+      ch.cooldown = 2.2;
+      ch.time = 0;
+    } else {
+      approach(0.12);
+      ch.cooldown = 1.2;
+      ch.time = 0;
     }
-    renderTyped();
-    refreshTarget();
     syncHud();
   }
 
@@ -554,10 +532,8 @@ export function createGameController(opts) {
   }
 
   function startParagraph() {
-    if (state.mode === "jiugong") {
-      startJiugongRound();
-      return;
-    }
+    ensureJiugong();
+    if (state.mode === "jiugong") startFaceChallenge();
     state.text = pickText();
     state.index = 0;
     state.typed = "";
@@ -655,33 +631,36 @@ export function createGameController(opts) {
     const onKeyDown = (ev) => {
       if (!state.running) return;
 
-      // 九宫：数字键选格
-      if (state.mode === "jiugong" && state.jiugong) {
-        const map = {
-          Numpad7: 0,
-          Numpad8: 1,
-          Numpad9: 2,
-          Numpad4: 3,
-          Numpad5: 4,
-          Numpad6: 5,
-          Numpad1: 6,
-          Numpad2: 7,
-          Numpad3: 8,
-          Digit7: 0,
-          Digit8: 1,
-          Digit9: 2,
-          Digit4: 3,
-          Digit5: 4,
-          Digit6: 5,
-          Digit1: 6,
-          Digit2: 7,
-          Digit3: 8,
-        };
-        if (ev.code in map) {
-          ev.preventDefault();
-          pickJiugong(map[ev.code]);
+      // 九宫：数字键对表情（不拦截其它键，打字照常）
+      if (state.mode === "jiugong" && state.jiugong?.challenge) {
+        const ch = state.jiugong.challenge;
+        if (ch.cooldown <= 0 && !state.imeComposing) {
+          const map = {
+            Numpad7: 0,
+            Numpad8: 1,
+            Numpad9: 2,
+            Numpad4: 3,
+            Numpad5: 4,
+            Numpad6: 5,
+            Numpad1: 6,
+            Numpad2: 7,
+            Numpad3: 8,
+            Digit7: 0,
+            Digit8: 1,
+            Digit9: 2,
+            Digit4: 3,
+            Digit5: 4,
+            Digit6: 5,
+            Digit1: 6,
+            Digit2: 7,
+            Digit3: 8,
+          };
+          if (ev.code in map) {
+            ev.preventDefault();
+            pickJiugong(map[ev.code]);
+            return;
+          }
         }
-        return;
       }
 
       // 键盘封锁陷阱：红键无法按下（物理 a-z）
@@ -720,16 +699,21 @@ export function createGameController(opts) {
     }
 
     if (state.mode === "jiugong" && state.jiugong) {
-      state.jiugong.time -= dt;
-      if (state.jiugong.time <= 0) {
-        approach(0.12);
-        if (state.running) startJiugongRound();
+      const ch = state.jiugong.challenge;
+      if (ch) {
+        if (ch.cooldown > 0) {
+          ch.cooldown -= dt;
+          if (ch.cooldown <= 0) startFaceChallenge();
+        } else {
+          ch.time -= dt;
+          if (ch.time <= 0) {
+            approach(0.1);
+            ch.cooldown = 1.4;
+          }
+        }
+      } else {
+        startFaceChallenge();
       }
-      // 闲置也会慢慢逼近
-      state.near = Math.min(0.98, state.near + dt * 0.018);
-      if (state.near >= 1) fail("拖太久了，她贴上来了。");
-      syncHud();
-      return;
     }
 
     state.time -= dt;
