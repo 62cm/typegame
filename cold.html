@@ -164,6 +164,56 @@
         position: relative;
         width: min(440px, 100%);
       }
+      /* 第一人称看手机：透视相机 */
+      .view-port {
+        position: relative;
+        width: 100%;
+        height: min(620px, 72vh);
+        perspective: 720px;
+        perspective-origin: 50% 70%;
+        overflow: hidden;
+        border-radius: 16px;
+        background:
+          radial-gradient(ellipse at 50% 0%, #4a4034 0%, transparent 55%),
+          linear-gradient(180deg, #2a241c 0%, #12100e 100%);
+        border: 1px solid #3a342c;
+      }
+      .look-cam {
+        position: absolute;
+        inset: 8% 6% 4%;
+        transform-style: preserve-3d;
+        transform-origin: 50% 85%;
+        will-change: transform;
+      }
+      .desk-surface {
+        position: absolute;
+        left: -8%;
+        right: -8%;
+        top: 8%;
+        bottom: -20%;
+        background:
+          linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.25) 100%),
+          repeating-linear-gradient(
+            90deg,
+            #3a3028 0px,
+            #3a3028 14px,
+            #322a22 14px,
+            #322a22 28px
+          );
+        transform: rotateX(58deg) translateZ(-40px);
+        transform-origin: 50% 0%;
+        border-radius: 8px;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+      }
+      .phone-wrap {
+        position: absolute;
+        left: 50%;
+        top: 6%;
+        width: 78%;
+        transform: translateX(-50%) rotateX(8deg) translateZ(48px);
+        transform-style: preserve-3d;
+        transform-origin: 50% 100%;
+      }
       #fx {
         position: absolute;
         inset: 0;
@@ -616,8 +666,12 @@
     </div>
 
     <div class="stage" id="stage">
-      <canvas id="fx"></canvas>
-      <div class="phone" id="phone">
+      <div class="view-port" id="view-port">
+        <canvas id="fx"></canvas>
+        <div class="look-cam" id="look-cam">
+          <div class="desk-surface" aria-hidden="true"></div>
+          <div class="phone-wrap" id="phone-wrap">
+            <div class="phone" id="phone">
         <div class="notch"></div>
         <div class="screen practice-empty" id="screen">
           <div class="status">
@@ -638,13 +692,16 @@
             <div class="reveal-line" id="reveal"></div>
           </div>
           <div class="kb-wrap" id="kb-wrap">
-            <div class="kb-hint" id="kb-hint">移动鼠标看抛物线 · 蓄满会自动喷</div>
+            <div class="kb-hint" id="kb-hint">移动鼠标 = 转头看键盘 · 抛物线跟视线走</div>
             <div class="kb" id="kb"></div>
           </div>
           <div class="compose">
             <div class="compose-label">对话框 · 打出来的报告</div>
             <div class="typed" id="typed"></div>
             <div class="emit" id="emit"></div>
+          </div>
+        </div>
+            </div>
           </div>
         </div>
       </div>
@@ -658,7 +715,7 @@
       </div>
       <div class="mouth-zone" id="mouth">
         <div class="mouth-face" id="mouth-face">😮</div>
-        <div class="title">口鼻 · 视线随鼠标</div>
+        <div class="title">口鼻 · 鼠标转视角瞄准</div>
         <div class="hold-meter"><i id="hold-fill"></i></div>
         <div class="ops">空格 / 按住下方 = 憋气（满 3s 大散射）</div>
         <button type="button" class="btn-hold" id="btn-hold">按住憋气</button>
@@ -673,6 +730,8 @@
       import { createColdGame, ROWS, sampleArc } from "./cold.js";
 
       const stage = document.getElementById("stage");
+      const viewPort = document.getElementById("view-port");
+      const lookCam = document.getElementById("look-cam");
       const phone = document.getElementById("phone");
       const screen = document.getElementById("screen");
       const fx = document.getElementById("fx");
@@ -713,24 +772,33 @@
       }
 
       function resizeFx() {
-        const r = stage.getBoundingClientRect();
-        const mouth = document.getElementById("mouth").getBoundingClientRect();
-        // canvas 覆盖手机 + 口鼻区
-        const top = r.top;
-        const bottom = mouth.bottom;
-        const left = Math.min(r.left, mouth.left);
-        const right = Math.max(r.right, mouth.right);
-        const w = right - left;
-        const h = bottom - top;
-        fx.style.position = "fixed";
-        fx.style.left = left + "px";
-        fx.style.top = top + "px";
-        fx.style.width = w + "px";
-        fx.style.height = h + "px";
+        const r = viewPort.getBoundingClientRect();
+        const w = r.width;
+        const h = r.height;
+        fx.style.position = "absolute";
+        fx.style.left = "0";
+        fx.style.top = "0";
+        fx.style.width = "100%";
+        fx.style.height = "100%";
         fx.width = Math.max(1, w * devicePixelRatio);
         fx.height = Math.max(1, h * devicePixelRatio);
         ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-        fx._box = { left, top, w, h };
+        fx._box = { left: r.left, top: r.top, w, h };
+      }
+
+      /** 鼠标驱动第一人称视角（明显转动） */
+      function applyLook(state) {
+        const yaw = state.aimX * -32; // 看左则世界右转
+        const pitch = 12 + state.aimY * 18; // 上下点头看键盘
+        const roll = state.aimX * 4;
+        lookCam.style.transform =
+          `rotateX(${pitch}deg) rotateY(${yaw}deg) rotateZ(${roll}deg) translateZ(${12 - Math.abs(state.aimY) * 8}px)`;
+        // 桌面随视线轻微视差
+        const desk = lookCam.querySelector(".desk-surface");
+        if (desk) {
+          desk.style.transform =
+            `rotateX(${58 + state.aimY * 6}deg) translateX(${state.aimX * -18}px) translateZ(-40px)`;
+        }
       }
 
       function buildKeyboard() {
@@ -826,7 +894,7 @@
 
         // 预览抛物线（明显）
         const force = Math.max(0.25, state.previewForce || 0.25);
-        const arc = sampleArc(state.aim, force, 0);
+        const arc = sampleArc(state.aimX ?? state.aim, force, 0, state.aimY || 0);
         ctx.beginPath();
         ctx.setLineDash([6, 5]);
         ctx.strokeStyle = state.holding
@@ -985,7 +1053,7 @@
           document.getElementById("hits").textContent = String(state.practiceHits);
           btnWipe.disabled = state.wipeCd > 0;
           btnWipe.textContent = state.wipeCd > 0 ? `擦 ${state.wipeCd.toFixed(1)}s` : "擦手机";
-          phone.style.transform = `rotate(${state.aim * 5}deg)`;
+          applyLook(state);
           drawFx(state);
           const e = state.elapsed;
           document.getElementById("tier-2000").classList.toggle("on", state.phase === "play" && e <= 180);
@@ -1002,19 +1070,23 @@
 
       buildKeyboard();
 
-      function aimFromX(clientX) {
-        const box = fx._box || stage.getBoundingClientRect();
-        const left = box.left ?? box.x;
-        const w = box.w ?? box.width;
-        const t = (clientX - left) / w;
-        game.setAim((t - 0.5) * 2);
+      function aimFromPointer(clientX, clientY) {
+        // 相对整个窗口中心转视角，移动就有明显“转头”感
+        const nx = (clientX / window.innerWidth - 0.5) * 2;
+        const ny = (clientY / window.innerHeight - 0.5) * 2;
+        game.setAim(
+          Math.max(-1, Math.min(1, nx * 1.15)),
+          Math.max(-1, Math.min(1, ny * 1.15)),
+        );
+        applyLook(game.state);
+        drawFx(game.state);
       }
 
-      window.addEventListener("mousemove", (e) => aimFromX(e.clientX));
+      window.addEventListener("mousemove", (e) => aimFromPointer(e.clientX, e.clientY));
       window.addEventListener(
         "touchmove",
         (e) => {
-          if (e.touches[0]) aimFromX(e.touches[0].clientX);
+          if (e.touches[0]) aimFromPointer(e.touches[0].clientX, e.touches[0].clientY);
         },
         { passive: true },
       );

@@ -39,16 +39,19 @@ export function payTier(elapsedSec) {
   return { label: "辛苦费", amount: 100, tip: "不限时完成" };
 }
 
-/** 预览抛物线采样点（归一化坐标，相对 stage） */
-export function sampleArc(aim, force, scatter = 0) {
-  const mouthX = 0.5 + aim * 0.06;
-  const mouthY = 0.88;
-  const targetX = 0.5 + aim * 0.38 + scatter;
-  const targetY = 0.42 - force * 0.05;
+/**
+ * 预览抛物线（归一化坐标）
+ * aimX: -1..1 左右视线；aimY: -1..1 上下视线（负=抬头看键盘上沿）
+ */
+export function sampleArc(aimX, force, scatter = 0, aimY = 0) {
+  const mouthX = 0.5 + aimX * 0.05;
+  const mouthY = 0.9;
+  const targetX = 0.5 + aimX * 0.42 + scatter;
+  const targetY = 0.5 + aimY * 0.22 - force * 0.04;
   const flight = 0.55;
   const vx = (targetX - mouthX) / flight;
-  const vy0 = (targetY - mouthY) / flight - 0.9 * force;
-  const g = 2.2;
+  const vy0 = (targetY - mouthY) / flight - 0.95 * force;
+  const g = 2.25;
   const pts = [];
   for (let t = 0; t <= flight; t += 0.03) {
     pts.push({
@@ -64,7 +67,8 @@ export function createColdGame(ui) {
     phase: "practice",
     running: false,
     finished: false,
-    aim: 0,
+    aimX: 0, // -1..1 左右
+    aimY: 0, // -1..1 上下（负=看向键盘上方）
     holding: false,
     holdTime: 0,
     // 蓄力 0..1，满格才喷（最大强度）
@@ -104,8 +108,9 @@ export function createColdGame(ui) {
     stainOrder = stainOrder.filter((s) => s.until > now);
   }
 
-  function setAim(a) {
-    state.aim = Math.max(-1, Math.min(1, a));
+  function setAim(x, y = state.aimY) {
+    state.aimX = Math.max(-1, Math.min(1, x));
+    state.aimY = Math.max(-1, Math.min(1, y));
   }
 
   function setHolding(on) {
@@ -155,19 +160,19 @@ export function createColdGame(ui) {
     state.previewForce = force;
     state.lastBurst = { kind, forced, scatter, force, goo, big };
 
-    const mouthX = 0.5 + state.aim * 0.06;
-    const mouthY = 0.88;
-    const targetY = 0.4 - force * 0.04;
-    const targetX = 0.5 + state.aim * 0.38;
-    const g = 2.2;
+    const mouthX = 0.5 + state.aimX * 0.05;
+    const mouthY = 0.9;
+    const targetY = 0.5 + state.aimY * 0.22 - force * 0.04;
+    const targetX = 0.5 + state.aimX * 0.42;
+    const g = 2.25;
 
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
       const tx = Math.max(0.06, Math.min(0.94, targetX + spread));
-      const ty = targetY + (Math.random() - 0.5) * scatter * 0.4;
+      const ty = Math.max(0.22, Math.min(0.62, targetY + (Math.random() - 0.5) * scatter * 0.4));
       const flight = 0.5 + Math.random() * 0.12;
       const vx = (tx - mouthX) / flight;
-      const vy = (ty - mouthY) / flight - 0.9 * force;
+      const vy = (ty - mouthY) / flight - 0.95 * force;
       state.projectiles.push({
         x: mouthX,
         y: mouthY,
@@ -312,7 +317,8 @@ export function createColdGame(ui) {
       phase: "practice",
       running: true,
       finished: false,
-      aim: 0,
+      aimX: 0,
+      aimY: 0,
       holding: false,
       holdTime: 0,
       coughCharge: 0.7,
