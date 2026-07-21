@@ -22,22 +22,23 @@
       html,
       body {
         margin: 0;
-        min-height: 100%;
-        background: radial-gradient(ellipse at 50% 0%, #3a342c 0%, #0a0908 65%);
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        background: #0a0908;
         color: var(--ink);
         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
       body {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        padding: 10px 10px 24px;
         user-select: none;
       }
       #nav {
         position: fixed;
         right: 10px;
-        bottom: 10px;
+        top: 10px;
+        bottom: auto;
         z-index: 50;
         display: flex;
         flex-direction: column;
@@ -53,18 +54,30 @@
       }
 
       .hud {
-        width: min(440px, 100%);
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        z-index: 30;
+        width: auto;
+        max-width: 520px;
+        margin: 0 auto;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 8px;
+        gap: 6px;
+        pointer-events: none;
+      }
+      .hud .meter-card,
+      .hud .power {
+        pointer-events: auto;
       }
       .meter-card {
-        background: rgba(18, 16, 14, 0.92);
+        background: rgba(18, 16, 14, 0.88);
         border: 1px solid #4a443c;
-        border-radius: 12px;
-        padding: 8px 10px;
+        border-radius: 10px;
+        padding: 6px 8px;
         color: #e8e0d4;
+        backdrop-filter: blur(6px);
       }
       .meter-card .row {
         display: flex;
@@ -162,55 +175,31 @@
 
       .stage {
         position: relative;
-        width: min(440px, 100%);
-      }
-      /* 第一人称看手机：透视相机 */
-      .view-port {
-        position: relative;
+        flex: 1;
         width: 100%;
-        height: min(620px, 72vh);
-        perspective: 720px;
-        perspective-origin: 50% 70%;
+        min-height: 0;
+      }
+      /* 整屏就是手机 */
+      .view-port {
+        position: absolute;
+        inset: 0;
+        perspective: 1100px;
+        perspective-origin: 50% 80%;
         overflow: hidden;
-        border-radius: 16px;
-        background:
-          radial-gradient(ellipse at 50% 0%, #4a4034 0%, transparent 55%),
-          linear-gradient(180deg, #2a241c 0%, #12100e 100%);
-        border: 1px solid #3a342c;
+        background: #0e0f12;
       }
       .look-cam {
         position: absolute;
-        inset: 8% 6% 4%;
+        inset: 0;
         transform-style: preserve-3d;
-        transform-origin: 50% 85%;
+        transform-origin: 50% 90%;
         will-change: transform;
-      }
-      .desk-surface {
-        position: absolute;
-        left: -8%;
-        right: -8%;
-        top: 8%;
-        bottom: -20%;
-        background:
-          linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.25) 100%),
-          repeating-linear-gradient(
-            90deg,
-            #3a3028 0px,
-            #3a3028 14px,
-            #322a22 14px,
-            #322a22 28px
-          );
-        transform: rotateX(58deg) translateZ(-40px);
-        transform-origin: 50% 0%;
-        border-radius: 8px;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
       }
       .phone-wrap {
         position: absolute;
-        left: 50%;
-        top: 6%;
-        width: 78%;
-        transform: translateX(-50%) rotateX(8deg) translateZ(48px);
+        inset: 0;
+        width: 100%;
+        height: 100%;
         transform-style: preserve-3d;
         transform-origin: 50% 100%;
       }
@@ -224,29 +213,35 @@
       }
       .phone {
         width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
         background: var(--bezel);
-        border-radius: 28px;
-        padding: 12px 10px 14px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 2px #333;
-        transform-origin: 50% 100%;
+        border-radius: 0;
+        padding: 0 0 env(safe-area-inset-bottom, 0);
+        box-shadow: none;
       }
       .notch {
-        width: 36%;
-        height: 16px;
-        margin: 0 auto 8px;
+        flex-shrink: 0;
+        width: 28%;
+        height: 10px;
+        margin: 6px auto 4px;
         background: #050506;
-        border-radius: 0 0 12px 12px;
+        border-radius: 0 0 10px 10px;
       }
       .screen {
         position: relative;
+        flex: 1;
+        min-height: 0;
         background: var(--screen);
-        border-radius: 18px;
+        border-radius: 0;
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        min-height: 520px;
       }
-      .screen.practice-empty .dictation,
+      .screen.practice-empty .chat,
+      .screen.practice-empty .chat-tools,
+      .screen.practice-empty .reveal-line,
       .screen.practice-empty .compose,
       .screen.practice-empty .pay-tiers {
         display: none;
@@ -255,13 +250,14 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        min-height: 280px;
+        justify-content: flex-end;
+        min-height: 0;
+        padding-bottom: 12vh;
       }
       .status {
         display: flex;
         justify-content: space-between;
-        padding: 8px 10px;
+        padding: 72px 10px 8px;
         font-size: 11px;
         color: var(--muted);
         background: #e8e4db;
@@ -290,82 +286,210 @@
         color: var(--ok);
         font-weight: 600;
       }
-      .dictation {
-        padding: 8px 10px;
-        background: #e4ebf0;
-        border-bottom: 1px solid #c9d3dc;
-      }
-      .mic-row {
+      .chat {
+        flex: 0 1 auto;
+        max-height: 28vh;
+        overflow-y: auto;
+        padding: 8px 10px 6px;
+        background: #dce5ec;
+        border-bottom: 1px solid #c0ccd6;
         display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .msg {
+        display: flex;
+        align-items: flex-start;
         gap: 8px;
+        max-width: 100%;
+      }
+      .msg.boss {
+        align-self: flex-start;
+      }
+      .msg.player {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        font-weight: 800;
+        color: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.12);
+      }
+      .avatar.boss {
+        background:
+          radial-gradient(circle at 35% 30%, #f0c8a0 0%, transparent 42%),
+          linear-gradient(160deg, #3a4a5c, #1a2430);
+      }
+      .avatar.boss::after {
+        content: "董";
+        font-size: 16px;
+        letter-spacing: 0.02em;
+      }
+      .avatar.player {
+        background:
+          radial-gradient(circle at 40% 28%, #ffd8b8 0%, transparent 40%),
+          linear-gradient(160deg, #5a7a68, #2a4034);
+      }
+      .avatar.player::after {
+        content: "王";
+        font-size: 16px;
+      }
+      .voice-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: min(52vw, 220px);
+        max-width: min(70vw, 320px);
+        padding: 10px 12px;
+        border: none;
+        border-radius: 4px 12px 12px 12px;
+        background: #fff;
+        color: #1a2228;
+        cursor: pointer;
+        font-family: inherit;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+        position: relative;
+      }
+      .voice-bar::before {
+        content: "";
+        position: absolute;
+        left: -5px;
+        top: 12px;
+        border: 5px solid transparent;
+        border-right-color: #fff;
+        border-left: 0;
+      }
+      .voice-bar .wave {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3a9a4a;
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        flex-shrink: 0;
+      }
+      .voice-bar .dur {
+        font-size: 14px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .voice-bar .hint {
+        font-size: 10px;
+        color: #6a7a68;
+        margin-left: auto;
+      }
+      .voice-bar.next {
+        outline: 2px solid #2a6a8a;
+        outline-offset: 1px;
+      }
+      .voice-bar.done {
+        background: #f0f7f0;
+      }
+      .voice-bar:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .voice-bar.speaking {
+        animation: voicePulse 0.7s ease infinite;
+      }
+      @keyframes voicePulse {
+        50% {
+          filter: brightness(1.08);
+        }
+      }
+      .chat-tools {
+        display: flex;
+        justify-content: flex-end;
+        padding: 0 10px 2px;
+        background: #dce5ec;
       }
       .mic {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        border: 2px solid #4a7a94;
-        background: radial-gradient(circle at 40% 35%, #9ec9e0, #3a6a82);
-        color: #fff;
+        border: none;
+        background: transparent;
+        color: #3a6a82;
         font-size: 11px;
         font-weight: 700;
         cursor: pointer;
-        z-index: 2;
-        position: relative;
-      }
-      .bubbles {
-        flex: 1;
-        max-height: 64px;
-        overflow-y: auto;
-      }
-      .bubble {
-        padding: 5px 8px;
-        margin-bottom: 4px;
-        background: #fff;
-        border: 1px solid #c5d0d8;
-        border-radius: 10px;
-        font-size: 11px;
+        padding: 2px 4px;
       }
       .reveal-line {
-        margin-top: 6px;
+        padding: 4px 10px 6px;
         font-size: 11px;
         font-family: Georgia, serif;
         word-break: break-word;
-        min-height: 2em;
+        background: #dce5ec;
+        color: #2a343c;
+        border-bottom: 1px solid #c0ccd6;
       }
       .reveal-line .ghost {
-        color: #b8c0c8;
+        color: #8a96a0;
+      }
+      .py-hint {
+        margin-top: 6px;
+        font-size: 12px;
+        font-family: ui-monospace, Consolas, monospace;
+        color: #2a5a72;
+        font-weight: 700;
+      }
+      .typed .ghost {
+        color: #9aa4ae;
+        font-size: 11px;
       }
       .kb-wrap {
         position: relative;
         z-index: 1;
-        padding: 10px 6px;
+        flex-shrink: 0;
+        padding: 6px 2.5% calc(118px + env(safe-area-inset-bottom, 0px));
         background: #ddd6c8;
+        width: 100%;
+        box-sizing: border-box;
       }
       .kb-hint {
-        font-size: 11px;
+        font-size: 10px;
         color: var(--muted);
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         font-weight: 600;
       }
       .kb {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        align-items: center;
+        gap: clamp(3px, 0.8vw, 6px);
+        width: 100%;
+        max-width: 100%;
       }
       .kb-row {
         display: flex;
-        gap: 3px;
+        width: 100%;
+        gap: clamp(2px, 0.7vw, 5px);
+        justify-content: center;
+      }
+      .kb-row.row-mid {
+        padding: 0 5%;
+      }
+      .kb-row.row-bot {
+        padding: 0 12%;
       }
       .key {
         position: relative;
-        width: 30px;
-        height: 36px;
+        flex: 1 1 0;
+        width: 0;
+        min-width: 0;
+        height: clamp(34px, 5.8vh, 48px);
         border: 1px solid #aaa;
         border-radius: 5px;
         background: linear-gradient(180deg, #faf8f3, #e8e2d6);
-        font-size: 12px;
+        font-size: clamp(11px, 2.8vw, 15px);
         font-weight: 700;
         text-transform: uppercase;
         display: grid;
@@ -379,11 +503,11 @@
         cursor: pointer;
       }
       .key.wide {
-        width: 52px;
-        font-size: 11px;
+        flex: 1.4 1 0;
+        font-size: clamp(10px, 2.4vw, 13px);
       }
       .key.space {
-        width: 150px;
+        flex: 4 1 0;
       }
       .stain {
         position: absolute;
@@ -395,33 +519,70 @@
       .stain.spit {
         background: radial-gradient(circle, #fff, #b8d0f066);
       }
+      .stain.cough {
+        background: radial-gradient(circle, #e8f0f8aa, #90b0c866);
+      }
       .stain.water {
         background: radial-gradient(circle, #d0f0ff, #60a0c8aa);
       }
       .stain.yellow {
         background: radial-gradient(circle at 40% 40%, #f0e060, #a09018);
       }
+      .typed .buf {
+        color: #2a6f8f;
+        border-bottom: 2px solid #2a6f8f;
+      }
+      .typed .buf.err {
+        color: #b04040;
+        border-bottom-color: #b04040;
+      }
+      .typed .need {
+        color: #c0a040;
+        background: #fff6d0;
+      }
       .compose {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 0;
         background: #f7f4ee;
         display: flex;
         flex-direction: column;
-        min-height: 80px;
+        overflow: hidden;
+      }
+      .compose-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 6px 10px 4px;
+        flex: 1;
+        min-height: 0;
+      }
+      .compose-row .avatar {
+        margin-top: 4px;
+      }
+      .compose-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
       .compose-label {
-        padding: 6px 12px 0;
+        padding: 0 0 2px;
         font-size: 11px;
         color: var(--muted);
+        text-align: right;
       }
       .typed {
-        margin: 4px 10px;
-        padding: 8px;
+        margin: 0;
+        padding: 8px 10px;
         background: #fff;
         border: 1px solid #d4cdc0;
-        border-radius: 8px;
-        font-size: 12px;
-        font-family: Georgia, serif;
-        min-height: 56px;
+        border-radius: 12px 4px 12px 12px;
+        font-size: clamp(12px, 2.6vw, 14px);
+        font-family: Georgia, "Songti SC", serif;
+        min-height: 48px;
+        max-height: 18vh;
+        overflow-y: auto;
         word-break: break-word;
       }
       .typed .ok {
@@ -442,21 +603,32 @@
       }
 
       .body-rig {
-        margin-top: 8px;
-        width: min(440px, 100%);
+        position: fixed;
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        z-index: 28;
+        width: auto;
+        max-width: 560px;
+        margin: 0 auto;
         display: grid;
-        grid-template-columns: 1fr 1.4fr 1fr;
-        gap: 8px;
+        grid-template-columns: 1fr 1.5fr 1fr;
+        gap: 6px;
         align-items: stretch;
+        pointer-events: none;
+      }
+      .body-rig > * {
+        pointer-events: auto;
       }
       .cast {
-        background: linear-gradient(180deg, #e8e4dc, #c8c2b4);
+        background: linear-gradient(180deg, rgba(232, 228, 220, 0.92), rgba(200, 194, 180, 0.92));
         border: 1px solid #9a9488;
         border-radius: 10px;
-        padding: 10px 8px;
+        padding: 8px 6px;
         text-align: center;
-        font-size: 11px;
+        font-size: 10px;
         color: #4a453c;
+        backdrop-filter: blur(6px);
       }
       .cast small {
         display: block;
@@ -615,11 +787,11 @@
         <h1>感冒模式</h1>
         <p>四肢石膏，只能控<strong>方向</strong>和<strong>憋气</strong>。蓄满才以最大强度喷出。</p>
         <ul>
-          <li><b>咳嗽</b>（3s 蓄满）：唾沫星子 · 看左侧进度条</li>
-          <li><b>小喷嚏</b>：清水鼻涕 · <b>每第 3 个</b>是大喷嚏：黄鼻涕</li>
-          <li>鼠标左右 = 视线方向（可见抛物线，无准心）</li>
-          <li>按住空格/按钮憋气，满 3s 大散射</li>
-          <li>先练空手机，再接老板电话</li>
+          <li><b>咳嗽 / 喷嚏</b>都是<strong>单发</strong>：一发只出一个字母</li>
+          <li><b>憋气满 3s</b>才爆<strong>唾沫星子</strong>（可粘键组合多字母）</li>
+          <li>小喷嚏清水鼻涕；每第 3 个大喷嚏黄鼻涕</li>
+          <li><b>点老板语音条</b>（每条 50–60 秒）→ 解锁要打的中文；喷射字母<strong>凑拼音</strong>出字</li>
+          <li>鼠标转视角瞄准 · 先练空手机</li>
         </ul>
         <button type="button" id="btn-practice">先练喷射</button>
       </div>
@@ -669,7 +841,6 @@
       <div class="view-port" id="view-port">
         <canvas id="fx"></canvas>
         <div class="look-cam" id="look-cam">
-          <div class="desk-surface" aria-hidden="true"></div>
           <div class="phone-wrap" id="phone-wrap">
             <div class="phone" id="phone">
         <div class="notch"></div>
@@ -684,21 +855,24 @@
             <span id="tier-1000">合同 ¥1000 · ≤5min</span>
             <span id="tier-100">辛苦 ¥100</span>
           </div>
-          <div class="dictation">
-            <div class="mic-row">
-              <button type="button" class="mic" id="mic">咳·听</button>
-              <div class="bubbles" id="bubbles"></div>
+          <div class="chat" id="chat"></div>
+          <div class="chat-tools">
+            <button type="button" class="mic" id="mic" title="解锁下一段老板语音">下一条语音 ▸</button>
+          </div>
+          <div class="reveal-line" id="reveal"></div>
+          <div class="compose">
+            <div class="compose-row">
+              <div class="compose-main">
+                <div class="compose-label">小王 · 拼音凑齐出字</div>
+                <div class="typed" id="typed"></div>
+                <div class="emit" id="emit"></div>
+              </div>
+              <div class="avatar player" title="小王" aria-label="玩家小王"></div>
             </div>
-            <div class="reveal-line" id="reveal"></div>
           </div>
           <div class="kb-wrap" id="kb-wrap">
             <div class="kb-hint" id="kb-hint">移动鼠标 = 转头看键盘 · 抛物线跟视线走</div>
             <div class="kb" id="kb"></div>
-          </div>
-          <div class="compose">
-            <div class="compose-label">对话框 · 打出来的报告</div>
-            <div class="typed" id="typed"></div>
-            <div class="emit" id="emit"></div>
           </div>
         </div>
             </div>
@@ -766,7 +940,7 @@
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(text);
           u.lang = "zh-CN";
-          u.rate = 0.85;
+          u.rate = 0.72;
           window.speechSynthesis.speak(u);
         } catch (_) {}
       }
@@ -786,27 +960,26 @@
         fx._box = { left: r.left, top: r.top, w, h };
       }
 
-      /** 鼠标驱动第一人称视角（明显转动） */
+      /** 轻微转头，手机仍铺满屏 */
       function applyLook(state) {
-        const yaw = state.aimX * -32; // 看左则世界右转
-        const pitch = 12 + state.aimY * 18; // 上下点头看键盘
-        const roll = state.aimX * 4;
+        const yaw = state.aimX * -10;
+        const pitch = 4 + state.aimY * 8;
+        const roll = state.aimX * 1.5;
         lookCam.style.transform =
-          `rotateX(${pitch}deg) rotateY(${yaw}deg) rotateZ(${roll}deg) translateZ(${12 - Math.abs(state.aimY) * 8}px)`;
-        // 桌面随视线轻微视差
-        const desk = lookCam.querySelector(".desk-surface");
-        if (desk) {
-          desk.style.transform =
-            `rotateX(${58 + state.aimY * 6}deg) translateX(${state.aimX * -18}px) translateZ(-40px)`;
+          `rotateX(${pitch}deg) rotateY(${yaw}deg) rotateZ(${roll}deg)`;
+        const wrap = document.getElementById("phone-wrap");
+        if (wrap) {
+          wrap.style.transform = `translateX(${state.aimX * -2}%) translateY(${state.aimY * 1.5}%)`;
         }
       }
 
       function buildKeyboard() {
         const kb = document.getElementById("kb");
         kb.innerHTML = "";
-        for (const row of ROWS) {
+        const rowClass = ["", "row-mid", "row-bot"];
+        ROWS.forEach((row, ri) => {
           const rowEl = document.createElement("div");
-          rowEl.className = "kb-row";
+          rowEl.className = "kb-row" + (rowClass[ri] ? " " + rowClass[ri] : "");
           for (const ch of row) {
             const el = document.createElement("div");
             el.className = "key";
@@ -815,7 +988,7 @@
             rowEl.appendChild(el);
           }
           kb.appendChild(rowEl);
-        }
+        });
         const util = document.createElement("div");
         util.className = "kb-row";
         const bk = document.createElement("button");
@@ -987,15 +1160,77 @@
         }
         const report = game.REPORT;
         const typed = state.typed;
+        const unlocked = state.revealedEnd;
         let html = "";
         for (let i = 0; i < typed.length; i++) {
           const ok = typed[i] === report[i];
           html += `<span class="${ok ? "ok" : "bad"}">${escapeHtml(typed[i] === " " ? "·" : typed[i])}</span>`;
         }
-        if (typed.length < report.length) {
-          html += `<span class="pending">${escapeHtml(report.slice(typed.length, typed.length + 36))}</span>`;
+        if (typed.length < unlocked) {
+          html += `<span class="pending">${escapeHtml(report.slice(typed.length, unlocked))}</span>`;
         }
-        el.innerHTML = html || `<span class="pending">等喷射拼字母…</span>`;
+        if (unlocked < report.length) {
+          html += `<span class="ghost">（点老板语音解锁）</span>`;
+        }
+        const py = state.needHint || "";
+        const buf = state.buffer || "";
+        const pyLine =
+          unlocked > typed.length && py
+            ? `拼音 ${buf || "·"} / ${py}`
+            : unlocked <= typed.length && unlocked < report.length
+              ? "点老板语音条 → 出字"
+              : "";
+        if (pyLine) {
+          html += `<div class="py-hint">${escapeHtml(pyLine)}${state.bufferError ? " · 错了按 ⌫" : ""}</div>`;
+        }
+        el.innerHTML = html || `<span class="pending">点老板语音条，变成要打的字</span>`;
+        document.getElementById("emit").textContent = state.lastEmit || "";
+      }
+
+      function fillBubbles(state) {
+        const box = document.getElementById("chat");
+        if (!box.dataset.built) {
+          box.innerHTML = "";
+          game.SEGMENTS.forEach((seg, i) => {
+            const row = document.createElement("div");
+            row.className = "msg boss";
+            const av = document.createElement("div");
+            av.className = "avatar boss";
+            av.title = "老板·董总";
+            av.setAttribute("aria-label", "老板");
+            const bar = document.createElement("button");
+            bar.type = "button";
+            bar.className = "voice-bar";
+            bar.dataset.i = String(i);
+            const dur = seg.duration || 55;
+            // 语音条宽度随时长略变（50–60″）
+            const w = 48 + ((dur - 50) / 10) * 22;
+            bar.style.minWidth = `min(${w}vw, ${140 + (dur - 50) * 8}px)`;
+            bar.innerHTML =
+              `<span class="wave">▶</span>` +
+              `<span class="dur">${dur}″</span>` +
+              `<span class="hint">点开听</span>`;
+            bar.onclick = () => game.unlockSegment(i);
+            row.append(av, bar);
+            box.appendChild(row);
+          });
+          box.dataset.built = "1";
+        }
+        const next = state.unlocked.findIndex((u) => !u);
+        box.querySelectorAll(".voice-bar[data-i]").forEach((b) => {
+          const i = +b.dataset.i;
+          b.classList.toggle("done", !!state.unlocked[i]);
+          b.classList.toggle("next", i === next);
+          b.disabled = next >= 0 && i > next;
+          const hint = b.querySelector(".hint");
+          if (hint) {
+            hint.textContent = state.unlocked[i]
+              ? "已解锁 · 可重听"
+              : i === next
+                ? "点开听"
+                : "先听上一条";
+          }
+        });
       }
 
       const game = createColdGame({
@@ -1006,7 +1241,7 @@
           document.getElementById("phase").textContent = practice ? "练习" : "交报告";
           document.getElementById("kb-hint").textContent = practice
             ? "空手机：看黄色抛物线，蓄满自动喷到键盘上"
-            : "正赛：拼出报告；喷到话筒可听口述";
+            : "点老板语音条解锁文字 · 喷射凑拼音出字";
           btnStartPlay.classList.toggle("hidden", !practice);
           resizeFx();
         },
@@ -1027,10 +1262,11 @@
         onReveal(state) {
           const report = game.REPORT;
           const u = report.slice(0, state.revealedEnd);
-          const rest = report.slice(state.revealedEnd, state.revealedEnd + 40);
-          document.getElementById("reveal").innerHTML =
-            escapeHtml(u) + (rest ? `<span class="ghost">${escapeHtml(rest)}…</span>` : "");
+          document.getElementById("reveal").innerHTML = u
+            ? escapeHtml(u)
+            : `<span class="ghost">点老板语音条 → 这里出现要打的字</span>`;
         },
+        onBubbles: fillBubbles,
         onPracticeHit(state, hits) {
           document.getElementById("hits").textContent = String(state.practiceHits);
           document.getElementById("emit").textContent =
@@ -1041,11 +1277,16 @@
           document.getElementById("emit").textContent = "石膏胳膊抹掉了屏上的鼻涕…";
         },
         onVoice(line, i, replay) {
-          const b = document.createElement("div");
-          b.className = "bubble";
-          b.textContent = (replay ? "（重听）" : `口述${i + 1}：`) + line;
-          document.getElementById("bubbles").appendChild(b);
           speak(line);
+          const b = document.querySelector(`.voice-bar[data-i="${i}"]`);
+          if (b) {
+            b.classList.add("speaking");
+            setTimeout(() => b.classList.remove("speaking"), 1800);
+            b.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          }
+          document.getElementById("emit").textContent = replay
+            ? `（重听）老板语音 ${i + 1}`
+            : `老板语音 ${i + 1} · 已解锁文字`;
         },
         onTick(state) {
           updateMeters(state);
@@ -1128,9 +1369,9 @@
         requestAnimationFrame(resizeFx);
       };
       btnStartPlay.onclick = () => {
+        const box = document.getElementById("chat");
+        delete box.dataset.built;
         game.startPlay();
-        document.getElementById("bubbles").innerHTML =
-          '<div class="bubble">喷到话筒或点「咳·听」听口述</div>';
         requestAnimationFrame(resizeFx);
       };
       document.getElementById("btn-again").onclick = () => {

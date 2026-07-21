@@ -1,11 +1,20 @@
 /**
- * 感冒模式：视线方向 + 力度蓄力喷射（抛物线）。
- * 咳：唾沫星子；小喷嚏：清水鼻涕；每第 3 个喷嚏为大喷嚏：黄鼻涕。
+ * 感冒模式：视线方向 + 蓄力喷射。
+ * 咳/喷嚏 = 单发一键一字；仅憋气爆发唾沫星子（可粘键组合）。
+ * 打字：喷射字母凑拼音，凑齐当前汉字的拼音才出字。
+ * 点老板语音条 → 解锁要打的中文。
  */
 
-import { REPORT, VOICE_LINES, charsUnlockedByVoice } from "./cold-content.js";
+import {
+  REPORT,
+  VOICE_LINES,
+  SEGMENTS,
+  fullPyList,
+  charsUnlockedByVoice,
+} from "./cold-content.js";
 
 export const ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+const PY = fullPyList();
 
 export function columnKeys(letter) {
   const cols = [];
@@ -24,9 +33,12 @@ export function columnKeys(letter) {
 }
 
 export const GOO = {
-  spit: { id: "spit", name: "唾沫星子", duration: 1.2, color: "#d8e8ff" },
-  water: { id: "water", name: "清水鼻涕", duration: 10, color: "#a8d8f0", drip: false },
-  yellow: { id: "yellow", name: "黄鼻涕", duration: 30, color: "#d4c020", drip: true },
+  // 憋气才大量出现：可粘键组合
+  spit: { id: "spit", name: "唾沫星子", duration: 12, color: "#d8e8ff", sticky: true },
+  // 普通咳嗽单发
+  cough: { id: "cough", name: "咳嗽飞沫", duration: 0.8, color: "#c8d8e8", sticky: false },
+  water: { id: "water", name: "清水鼻涕", duration: 8, color: "#a8d8f0", sticky: false, drip: false },
+  yellow: { id: "yellow", name: "黄鼻涕", duration: 20, color: "#d4c020", sticky: false, drip: true },
 };
 
 export const COUGH_PERIOD = 3;
@@ -79,20 +91,24 @@ export function createColdGame(ui) {
     wipeCd: 0,
     stains: new Map(),
     projectiles: [],
-    typed: "",
-    revealedEnd: 0,
+    typed: "", // 已确认写入报告的中文前缀
+    buffer: "", // 正在凑的拼音
+    bufferError: false,
+    revealedEnd: 0, // 已解锁可打到的字数
+    unlocked: SEGMENTS.map(() => false),
     voiceIndex: 0,
     elapsed: 0,
     stainSeq: 0,
     lastEmit: "",
     lastBurst: null,
     practiceHits: 0,
-    // 当前预览力度（蓄力中显示）
     previewForce: 0,
-    intensity: 0, // 最近一次喷射强度 0..1
+    intensity: 0,
+    needHint: "", // 下一个汉字的拼音
   };
 
   let stainOrder = [];
+  let spitSig = ""; // 唾沫星子组合签名，避免重复灌字
 
   function clearStains() {
     state.stains.clear();
@@ -131,29 +147,110 @@ export function createColdGame(ui) {
     return (state.sneezeIndex + 1) % 3 === 0;
   }
 
+  function needPy() {
+    if (state.typed.length >= state.revealedEnd) return "";
+    return PY[state.typed.length] || "";
+  }
+
+  /** 标点拼音为空：解锁范围内自动写入 */
+  function autoSkipPunct() {
+    while (state.typed.length < state.revealedEnd) {
+      const py = PY[state.typed.length];
+      if (py !== "") break;
+      state.typed += REPORT[state.typed.length];
+    }
+    state.needHint = needPy();
+  }
+
+  /** 往拼音缓冲里塞；凑齐当前汉字拼音才出字 */
+  function pushLetters(letters) {
+    if (!letters) return;
+    const clean = String(letters).toLowerCase().replace(/[^a-z]/g, "");
+    if (!clean) return;
+
+    if (state.phase === "practice") {
+      state.practiceHits += clean.length;
+      state.lastEmit = clean;
+      ui.onPracticeHit?.(state, clean.split(""));
+      return;
+    }
+    if (state.phase !== "play") return;
+
+    if (state.bufferError) {
+      state.lastEmit = "(先 ⌫ 删掉错拼音)";
+      ui.onTyped?.(state);
+      return;
+    }
+
+    for (const ch of clean) {
+      if (state.bufferError) break;
+      if (state.typed.length >= state.revealedEnd) {
+        state.lastEmit = "(先点老板语音条，解锁要打的字)";
+        break;
+      }
+      autoSkipPunct();
+      const need = needPy();
+      if (!need) {
+        state.lastEmit = "(先点老板语音条，解锁要打的字)";
+        break;
+      }
+      const nextBuf = state.buffer + ch;
+      if (need.startsWith(nextBuf)) {
+        state.buffer = nextBuf;
+        state.bufferError = false;
+        if (state.buffer === need) {
+          state.typed += REPORT[state.typed.length];
+          state.buffer = "";
+          state.lastEmit = `✓ ${need} → ${REPORT[state.typed.length - 1]}`;
+          autoSkipPunct();
+          checkWin();
+        } else {
+          state.lastEmit = `${state.buffer}_ / ${need}`;
+        }
+      } else {
+        state.buffer = nextBuf;
+        state.bufferError = true;
+        state.lastEmit = `✗ ${state.buffer} ≠ ${need}`;
+        ui.onSyllableFail?.(state.buffer, need);
+        break;
+      }
+    }
+    state.needHint = needPy();
+    ui.onTyped?.(state);
+  }
+
   /**
    * kind: cough | sneeze
-   * forced: 憋满爆发
+   * forced: 憋满 → 只爆发唾沫星子（可组合）
    */
   function burst(kind, forced = false) {
-    const isSneeze = kind === "sneeze";
-    let goo = "spit";
+    let goo = "cough";
     let big = false;
-    if (isSneeze) {
+    let count = 1;
+    let force = 1;
+    let scatter = 0.04;
+
+    if (forced) {
+      // 只有憋气才爆唾沫星子
+      goo = "spit";
+      force = 1.4;
+      scatter = 0.32;
+      count = 14;
+      kind = "spitburst";
+    } else if (kind === "sneeze") {
       state.sneezeIndex += 1;
       big = state.sneezeIndex % 3 === 0;
       goo = big ? "yellow" : "water";
       state.nextSneezeBig = (state.sneezeIndex + 1) % 3 === 0;
-    }
-
-    // 满蓄力 = 最大强度；憋满再乘散射
-    let force = 1;
-    let scatter = isSneeze ? (big ? 0.28 : 0.16) : 0.09;
-    let count = isSneeze ? (big ? 10 : 6) : 5;
-    if (forced) {
-      force = 1.35;
-      scatter *= 2.5;
-      count = Math.floor(count * 2.1);
+      scatter = big ? 0.1 : 0.06;
+      count = 1; // 单发
+      force = big ? 1.15 : 1;
+    } else {
+      // 普通咳嗽：单发飞沫
+      goo = "cough";
+      count = 1;
+      scatter = 0.05;
+      force = 1;
     }
 
     state.intensity = force;
@@ -169,7 +266,10 @@ export function createColdGame(ui) {
     for (let i = 0; i < count; i++) {
       const spread = (Math.random() - 0.5) * 2 * scatter;
       const tx = Math.max(0.06, Math.min(0.94, targetX + spread));
-      const ty = Math.max(0.22, Math.min(0.62, targetY + (Math.random() - 0.5) * scatter * 0.4));
+      const ty = Math.max(
+        0.22,
+        Math.min(0.62, targetY + (Math.random() - 0.5) * scatter * 0.4),
+      );
       const flight = 0.5 + Math.random() * 0.12;
       const vx = (tx - mouthX) / flight;
       const vy = (ty - mouthY) / flight - 0.95 * force;
@@ -183,8 +283,9 @@ export function createColdGame(ui) {
         age: 0,
         g,
         landed: false,
-        r: goo === "yellow" ? 0.014 : goo === "water" ? 0.011 : 0.008,
+        r: goo === "yellow" ? 0.015 : goo === "spit" ? 0.009 : 0.011,
         trail: [],
+        single: goo !== "spit",
       });
     }
 
@@ -197,37 +298,42 @@ export function createColdGame(ui) {
     if (!hits.length) return;
 
     const now = performance.now() / 1000;
-    const def = GOO[goo] || GOO.spit;
+    const def = GOO[goo] || GOO.cough;
     const until = now + def.duration;
+    const primary = hits[0];
 
-    for (const letter of hits) {
-      addStain(letter, goo, until);
-      if (def.drip) {
-        for (const k of columnKeys(letter).slice(1)) {
-          addStain(k, goo, now + 10);
-        }
+    addStain(primary, goo, until);
+    if (def.drip) {
+      for (const k of columnKeys(primary).slice(1)) {
+        addStain(k, goo, now + Math.min(10, def.duration));
       }
     }
 
-    if (state.phase === "play") {
+    if (def.sticky || goo === "spit") {
+      // 唾沫星子：粘键组合——本次签名相对上次新增的字母才入缓冲
       pruneStains(now);
       const seen = new Set();
-      let chunk = "";
+      let sig = "";
       for (const s of stainOrder) {
         if (s.until <= now) continue;
+        if (s.type !== "spit") continue;
         if (seen.has(s.key)) continue;
         seen.add(s.key);
-        chunk += s.key;
+        sig += s.key;
       }
-      if (chunk) {
-        state.typed += chunk;
-        state.lastEmit = chunk;
-        ui.onTyped?.(state);
-        checkWin();
+      if (sig.startsWith(spitSig)) {
+        pushLetters(sig.slice(spitSig.length));
+      } else {
+        pushLetters(primary);
       }
-    } else if (state.phase === "practice") {
-      state.practiceHits += hits.length;
-      ui.onPracticeHit?.(state, hits);
+      spitSig = sig;
+    } else {
+      // 单发：只打中的那一个键一个字母
+      pushLetters(primary);
+    }
+
+    if (state.phase === "practice") {
+      // pushLetters 已计 practiceHits
     }
     ui.onStain?.(state);
   }
@@ -266,6 +372,7 @@ export function createColdGame(ui) {
     if (!state.running || state.finished) return false;
     if (state.wipeCd > 0) return false;
     clearStains();
+    spitSig = "";
     state.projectiles = [];
     state.wipeCd = 8;
     ui.onWipe?.(state);
@@ -274,37 +381,78 @@ export function createColdGame(ui) {
   }
 
   let voiceLockUntil = 0;
+
+  /** 点老板语音条 → 解锁对应中文；须按顺序点 */
+  function unlockSegment(i) {
+    if (state.phase !== "play" || !state.running || state.finished) return;
+    if (i < 0 || i >= SEGMENTS.length) return;
+
+    if (state.unlocked[i]) {
+      ui.onVoice?.(SEGMENTS[i].say, i, true);
+      return;
+    }
+
+    const next = state.unlocked.findIndex((u) => !u);
+    if (i !== next) {
+      state.lastEmit =
+        next < 0 ? "老板语音都听完了" : "先点上一条老板语音";
+      ui.onTyped?.(state);
+      return;
+    }
+
+    state.unlocked[i] = true;
+    state.voiceIndex = i + 1;
+    const { end } = charsUnlockedByVoice(i);
+    state.revealedEnd = end;
+    autoSkipPunct();
+    ui.onVoice?.(SEGMENTS[i].say, i, false);
+    ui.onReveal?.(state);
+    ui.onBubbles?.(state);
+    ui.onTyped?.(state);
+  }
+
+  /** 喷到话筒 / 咳·听 = 解锁下一段 */
   function spitForVoice() {
     if (state.phase !== "play" || !state.running || state.finished) return;
     const t = performance.now();
     if (t < voiceLockUntil) return;
-    voiceLockUntil = t + 900;
-    if (state.voiceIndex < VOICE_LINES.length) {
-      const { end } = charsUnlockedByVoice(state.voiceIndex);
-      state.revealedEnd = Math.max(state.revealedEnd, end);
-      ui.onVoice?.(VOICE_LINES[state.voiceIndex], state.voiceIndex, false);
-      state.voiceIndex += 1;
-      ui.onReveal?.(state);
-    } else {
-      ui.onVoice?.(VOICE_LINES[VOICE_LINES.length - 1], VOICE_LINES.length - 1, true);
+    voiceLockUntil = t + 500;
+    const next = state.unlocked.findIndex((u) => !u);
+    if (next < 0) {
+      ui.onVoice?.(
+        VOICE_LINES[VOICE_LINES.length - 1],
+        VOICE_LINES.length - 1,
+        true,
+      );
+      return;
     }
+    unlockSegment(next);
   }
 
   function backspace() {
-    if (state.phase !== "play" || !state.running) return;
-    state.typed = state.typed.slice(0, -1);
-    ui.onTyped?.(state);
+    if (!state.running || state.finished) return;
+    if (state.phase === "practice") return;
+    if (state.buffer.length > 0) {
+      state.buffer = state.buffer.slice(0, -1);
+      state.bufferError = false;
+      state.lastEmit = "⌫";
+      state.needHint = needPy();
+      ui.onTyped?.(state);
+      return;
+    }
+    // 已提交正文不回退（避免刷进度）
   }
 
   function space() {
-    if (state.phase !== "play" || !state.running) return;
-    state.typed += " ";
-    ui.onTyped?.(state);
-    checkWin();
+    // 标点自动写入，无需喷射空格
   }
 
   function checkWin() {
-    if (state.phase === "play" && state.typed === REPORT) {
+    if (
+      state.phase === "play" &&
+      state.typed.length >= REPORT.length &&
+      state.unlocked.every(Boolean)
+    ) {
       state.finished = true;
       state.running = false;
       state.phase = "done";
@@ -331,7 +479,16 @@ export function createColdGame(ui) {
       projectiles: [],
       intensity: 0,
       previewForce: 0,
+      buffer: "",
+      bufferError: false,
+      typed: "",
+      lastEmit: "",
+      needHint: "",
+      revealedEnd: 0,
+      unlocked: SEGMENTS.map(() => false),
+      voiceIndex: 0,
     });
+    spitSig = "";
     state.nextSneezeBig = peekSneezeBig();
     clearStains();
     ui.onPhase?.(state);
@@ -343,7 +500,10 @@ export function createColdGame(ui) {
       running: true,
       finished: false,
       typed: "",
+      buffer: "",
+      bufferError: false,
       revealedEnd: 0,
+      unlocked: SEGMENTS.map(() => false),
       voiceIndex: 0,
       elapsed: 0,
       coughCharge: 0,
@@ -353,11 +513,14 @@ export function createColdGame(ui) {
       holding: false,
       holdTime: 0,
       projectiles: [],
-      lastEmit: "",
+      lastEmit: "点老板语音条，变成要打的字",
+      needHint: "",
     });
+    spitSig = "";
     state.nextSneezeBig = peekSneezeBig();
     clearStains();
     ui.onPhase?.(state);
+    ui.onBubbles?.(state);
     ui.onTyped?.(state);
     ui.onReveal?.(state);
     ui.onStain?.(state);
@@ -377,12 +540,11 @@ export function createColdGame(ui) {
     if (state.holding) {
       state.holdTime += dt;
       if (state.holdTime >= HOLD_MAX) {
-        const kind = state.sneezeCharge >= state.coughCharge ? "sneeze" : "cough";
-        burst(kind, true);
+        // 憋满只爆唾沫星子
+        burst("cough", true);
         state.holding = false;
         state.holdTime = 0;
-        if (kind === "sneeze") state.sneezeCharge = 0;
-        else state.coughCharge = 0;
+        state.coughCharge = 0;
       }
     } else {
       state.coughCharge = Math.min(1, state.coughCharge + dt / COUGH_PERIOD);
@@ -436,6 +598,7 @@ export function createColdGame(ui) {
     setHolding,
     wipePhone,
     spitForVoice,
+    unlockSegment,
     backspace,
     space,
     startPractice,
@@ -444,6 +607,7 @@ export function createColdGame(ui) {
     sampleArc,
     REPORT,
     VOICE_LINES,
+    SEGMENTS,
     GOO,
     ROWS,
     payTier,

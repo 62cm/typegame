@@ -1,28 +1,99 @@
-/** 感冒模式：老板口述 + 学术报告正文 */
+/** 感冒模式：点老板语音条 → 变成要打的中文；喷射凑拼音出字 */
 
-export const VOICE_LINES = [
-  "喂，小王吗？合同附件今晚必须交，你现在就打。",
-  "开头先写研究背景，别写得像微博。",
-  "方法论那一段要显得客观，少用我觉得。",
-  "结果讨论分开写，引用别忘了。",
-  "结论收束到管理启示，最后留一句后续工作。",
-  "好了就发我邮箱，别再咳嗽对着麦克风。",
+/** [汉字, 拼音]；标点拼音为 ""，解锁后自动写入 */
+/** duration：语音条显示秒数（50–60） */
+export const SEGMENTS = [
+  {
+    duration: 54,
+    say:
+      "喂小王你在听吗，我这会儿在车里说，你先别急着回，把耳朵竖起来。" +
+      "今晚合同附件里的研究背景必须写清楚，别给我写成微博那种语气，也别写成朋友圈总结。" +
+      "客户要的是可核验、可引用、能放到标书附录里的东西，你写虚了明天评审会直接打回来。" +
+      "数字化协作强度对企业项目交付效率的影响，这条线你给我立住，概念别飘，例子别空。" +
+      "我不管你现在鼻子堵不堵，反正文字要干净。听完这条再写，写完先别发，等我下一条。",
+    units: [
+      ["本", "ben"], ["研", "yan"], ["究", "jiu"], ["旨", "zhi"], ["在", "zai"],
+      ["探", "tan"], ["讨", "tao"], ["数", "shu"], ["字", "zi"], ["化", "hua"],
+      ["协", "xie"], ["作", "zuo"], ["强", "qiang"], ["度", "du"], ["对", "dui"],
+      ["企", "qi"], ["业", "ye"], ["项", "xiang"], ["目", "mu"], ["交", "jiao"],
+      ["付", "fu"], ["效", "xiao"], ["率", "lv"], ["的", "de"], ["影", "ying"],
+      ["响", "xiang"], ["。", ""],
+    ],
+  },
+  {
+    duration: 58,
+    say:
+      "还有，方法论那段你给我客观一点，少写我觉得我认为，多写问卷怎么采、日志怎么归、模型怎么估。" +
+      "基于多源问卷与归档绩效日志这一套，你把结构模型写明白，团队规模控制变量别漏。" +
+      "评审最爱抓的就是你方法站不住，一站不住结论全废。你现在石膏打着我也不同情，" +
+      "能动嘴能动眼神就给我把字喷出来。听清了：数据、模型、控制变量，三条缺一不可。" +
+      "这条说完你接着打字，别等我催第二次。",
+    units: [
+      ["基", "ji"], ["于", "yu"], ["多", "duo"], ["源", "yuan"], ["问", "wen"],
+      ["卷", "juan"], ["与", "yu"], ["归", "gui"], ["档", "dang"], ["绩", "ji"],
+      ["效", "xiao"], ["日", "ri"], ["志", "zhi"], ["，", ""],
+      ["本", "ben"], ["文", "wen"], ["估", "gu"], ["计", "ji"], ["结", "jie"],
+      ["构", "gou"], ["模", "mo"], ["型", "xing"], ["并", "bing"], ["控", "kong"],
+      ["制", "zhi"], ["团", "tuan"], ["队", "dui"], ["规", "gui"], ["模", "mo"],
+      ["。", ""],
+    ],
+  },
+  {
+    duration: 52,
+    say:
+      "结果和讨论给我分开写，别搅成一锅粥。引用格式按模板来，漏一条文献我都看得见。" +
+      "结论要落到管理启示，别只报显著不显著。基础设施成熟度对交付效率有没有正向作用，" +
+      "你用结果说话，用讨论解释机制，用启示给客户一句能听懂的话。听着像啰嗦是吧，" +
+      "合同就吃这一套。你咳归咳，字别咳歪了。这条语音比较长，听完再动键盘。",
+    units: [
+      ["结", "jie"], ["果", "guo"], ["表", "biao"], ["明", "ming"], ["基", "ji"],
+      ["础", "chu"], ["设", "she"], ["施", "shi"], ["成", "cheng"], ["熟", "shu"],
+      ["度", "du"], ["对", "dui"], ["交", "jiao"], ["付", "fu"], ["效", "xiao"],
+      ["率", "lv"], ["具", "ju"], ["有", "you"], ["显", "xian"], ["著", "zhu"],
+      ["正", "zheng"], ["向", "xiang"], ["作", "zuo"], ["用", "yong"], ["。", ""],
+    ],
+  },
+  {
+    duration: 57,
+    say:
+      "最后补局限和后续工作，样本范围写诚实点，别装全面。后续要写纵向传感数据和跨境网络，" +
+      "听起来远是吧，标书里就得远一点才显厚度。写完直接发我邮箱，抄送项目群，别私发我一个。" +
+      "另外你别再对着麦克风咳嗽打喷嚏了，录音一听全是飞沫，客户会以为我们公司不专业。" +
+      "好了我说完了，四条语音你按顺序听、按顺序打。打完交差，打不完今晚别睡。",
+    units: [
+      ["局", "ju"], ["限", "xian"], ["在", "zai"], ["于", "yu"], ["样", "yang"],
+      ["本", "ben"], ["范", "fan"], ["围", "wei"], ["，", ""],
+      ["后", "hou"], ["续", "xu"], ["应", "ying"], ["纳", "na"], ["入", "ru"],
+      ["纵", "zong"], ["向", "xiang"], ["传", "chuan"], ["感", "gan"], ["数", "shu"],
+      ["据", "ju"], ["与", "yu"], ["跨", "kua"], ["境", "jing"], ["网", "wang"],
+      ["络", "luo"], ["。", ""],
+    ],
+  },
 ];
 
-/** 需打出的英文学术段落（全键盘唾液输入） */
-export const REPORT =
-  "This study examines how remote collaboration intensity mediates the relationship between digital infrastructure maturity and project delivery efficiency in knowledge-intensive firms. Drawing on a multi-site survey and archival performance logs, we estimate a structural model that controls for team size, industry turbulence, and prior process standardization. Results indicate that infrastructure maturity has a significant positive effect on delivery efficiency, partially transmitted through collaboration intensity. The mediation is stronger when teams maintain synchronous review rituals and weaker when asynchronous backlog practices dominate. Implications for managers include sequencing tool investment after clarifying coordination cadences, and treating collaboration intensity as a measurable operating variable rather than a cultural slogan. Limitations concern single-country sampling and self-reported workload items; future work should incorporate longitudinal sensor data and cross-border vendor networks.";
+export function segmentText(seg) {
+  return seg.units.map((u) => u[0]).join("");
+}
 
-/** 每段语音解锁的正文字符数（含空格） */
+export function segmentPy(seg) {
+  return seg.units.map((u) => u[1]);
+}
+
+export function fullReport() {
+  return SEGMENTS.map(segmentText).join("");
+}
+
+export function fullPyList() {
+  return SEGMENTS.flatMap(segmentPy);
+}
+
+export const REPORT = fullReport();
+export const VOICE_LINES = SEGMENTS.map((s) => s.say);
+
 export function charsUnlockedByVoice(voiceIndex) {
-  const n = REPORT.length;
-  const parts = VOICE_LINES.length;
-  const base = Math.floor(n / parts);
-  const extra = n % parts;
-  let start = 0;
-  for (let i = 0; i < voiceIndex; i++) {
-    start += base + (i < extra ? 1 : 0);
+  let end = 0;
+  for (let i = 0; i <= voiceIndex && i < SEGMENTS.length; i++) {
+    end += segmentText(SEGMENTS[i]).length;
   }
-  const len = base + (voiceIndex < extra ? 1 : 0);
-  return { start, end: Math.min(n, start + len) };
+  return { start: 0, end };
 }
