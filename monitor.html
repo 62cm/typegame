@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>涓嶅彲杞ご 路 鏄剧ず灞忔墦瀛?/title>
+    <title>不可转头 · 显示屏版</title>
     <style>
       :root {
         --desk: #1a1410;
@@ -14,6 +14,7 @@
         --danger: #c23b3b;
         --text: #d8d2c8;
         --muted: #8a8074;
+        --candle: 1;
       }
       * {
         box-sizing: border-box;
@@ -28,12 +29,12 @@
         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
 
-      /* Room: you face the monitor; ghost stays behind (reflections / periphery only) */
       #room {
         position: relative;
         width: 100%;
         height: 100%;
         background:
+          radial-gradient(ellipse 70% 50% at 18% 72%, rgba(255, 140, 40, calc(0.12 * var(--candle))), transparent 55%),
           radial-gradient(ellipse 90% 60% at 50% 0%, #1a1010 0%, transparent 55%),
           linear-gradient(180deg, #0c0c10 0%, #15110e 48%, #1a1410 100%);
         display: grid;
@@ -41,7 +42,6 @@
         overflow: hidden;
       }
 
-      /* Peripheral shadow of something behind you 鈥?never a face in front */
       #behind-presence {
         position: absolute;
         inset: 0;
@@ -57,7 +57,7 @@
         top: 0;
         width: 18%;
         height: 100%;
-        opacity: 0;
+        opacity: var(--edge, 0);
         transition: opacity 0.2s linear;
         filter: blur(10px);
       }
@@ -73,8 +73,118 @@
       #desk {
         position: relative;
         z-index: 2;
-        width: min(920px, 96vw);
+        width: min(980px, 96vw);
         transform-origin: center center;
+        display: flex;
+        align-items: flex-end;
+        gap: 18px;
+      }
+
+      /* Candle — left of monitor; dims when ghost is near */
+      #candle-wrap {
+        flex: 0 0 auto;
+        width: 56px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 78px;
+        opacity: var(--candle);
+        filter: brightness(calc(0.35 + 0.65 * var(--candle)));
+        transition: opacity 0.2s linear, filter 0.2s linear;
+        pointer-events: none;
+      }
+      #candle-glow {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: radial-gradient(circle, rgba(255, 160, 60, 0.45), transparent 70%);
+        opacity: calc(0.35 + 0.65 * var(--candle));
+        filter: blur(8px);
+        z-index: -1;
+        animation: glow-breathe 2.4s ease-in-out infinite;
+      }
+      @keyframes glow-breathe {
+        0%,
+        100% {
+          transform: translateX(-50%) scale(1);
+          opacity: calc(0.3 + 0.5 * var(--candle));
+        }
+        50% {
+          transform: translateX(-50%) scale(1.12);
+          opacity: calc(0.45 + 0.55 * var(--candle));
+        }
+      }
+      #candle-body {
+        position: relative;
+        width: 18px;
+        height: 52px;
+        background: linear-gradient(90deg, #e8d8b8, #f4ead4 45%, #cbb896);
+        border-radius: 3px 3px 2px 2px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+      }
+      #candle-body::before {
+        content: "";
+        position: absolute;
+        top: -3px;
+        left: 50%;
+        width: 2px;
+        height: 8px;
+        transform: translateX(-50%);
+        background: #3a2a18;
+        border-radius: 1px;
+      }
+      #candle-flame {
+        position: relative;
+        width: 14px;
+        height: 22px;
+        margin-bottom: 2px;
+        background: radial-gradient(ellipse at 50% 80%, #fff6c8 0%, #ffb040 40%, #ff6020 75%, transparent 100%);
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        transform-origin: 50% 100%;
+        animation: flame-flicker 0.18s ease-in-out infinite alternate;
+        box-shadow:
+          0 0 12px rgba(255, 140, 40, 0.7),
+          0 0 28px rgba(255, 80, 20, 0.35);
+        opacity: calc(0.25 + 0.75 * var(--candle));
+      }
+      #candle-flame::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: 2px;
+        width: 6px;
+        height: 10px;
+        transform: translateX(-50%);
+        background: radial-gradient(ellipse, #fffef0, #ffe080 60%, transparent);
+        border-radius: 50%;
+        opacity: 0.9;
+      }
+      @keyframes flame-flicker {
+        0% {
+          transform: scaleY(1) scaleX(1) rotate(-2deg);
+        }
+        40% {
+          transform: scaleY(1.08) scaleX(0.92) rotate(1deg);
+        }
+        100% {
+          transform: scaleY(0.94) scaleX(1.06) rotate(2deg);
+        }
+      }
+      #candle-holder {
+        width: 28px;
+        height: 8px;
+        margin-top: 2px;
+        background: linear-gradient(180deg, #4a4038, #2a2420);
+        border-radius: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      #monitor-block {
+        flex: 1 1 auto;
+        min-width: 0;
       }
 
       #monitor {
@@ -94,7 +204,7 @@
         position: relative;
       }
 
-      /* Glass reflection: faint silhouette "behind you" appears ON the glass */
+      /* Glass reflection: ghost silhouette behind you, on the glass only */
       #glass-reflection {
         position: absolute;
         inset: 12px;
@@ -140,8 +250,8 @@
       #screen {
         position: relative;
         background: var(--screen);
-        min-height: min(58vh, 520px);
-        max-height: min(58vh, 520px);
+        min-height: min(56vh, 500px);
+        max-height: min(56vh, 500px);
         overflow: hidden;
         border-radius: 3px;
         box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55);
@@ -164,6 +274,8 @@
 
       #screen-chrome {
         display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
         justify-content: space-between;
         padding: 8px 12px;
         font-size: 11px;
@@ -178,11 +290,22 @@
       #screen-chrome .bad b {
         color: #f08080;
       }
+      #ng-badge {
+        color: #e0a060;
+        border: 1px solid #6a4030;
+        padding: 0 6px;
+        border-radius: 2px;
+      }
+      #ng-badge.hidden {
+        display: none;
+      }
 
       #article-wrap {
         height: calc(100% - 34px);
-        overflow: hidden;
+        overflow: auto;
         position: relative;
+        scrollbar-width: thin;
+        scrollbar-color: #2a4a38 transparent;
       }
       #article {
         padding: 14px 16px 120px;
@@ -203,6 +326,36 @@
       #article .todo {
         color: var(--phosphor-dim);
       }
+      #article .ink {
+        color: transparent !important;
+        background: #0a0a0a;
+        box-shadow: inset 0 0 0 1px #1a1a1a;
+        border-radius: 1px;
+        text-shadow: none;
+      }
+      #article .ink.current {
+        outline-color: rgba(80, 80, 80, 0.5);
+        background: #111;
+      }
+      #article .trap {
+        position: relative;
+        color: #c07070;
+      }
+      #article .trap .trap-x {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: #e04040;
+        font-size: 1.05em;
+        font-weight: 700;
+        pointer-events: none;
+        text-shadow: 0 0 4px rgba(200, 0, 0, 0.6);
+        line-height: 1;
+      }
+      #article .trap.done .trap-x {
+        opacity: 0.35;
+      }
 
       #stand {
         width: 90px;
@@ -221,7 +374,8 @@
       }
       #desk-wood {
         margin-top: 10px;
-        height: 70px;
+        height: auto;
+        min-height: 70px;
         background: linear-gradient(180deg, #2a2018, #1a1410 60%, #120e0c);
         border-radius: 4px;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -232,6 +386,8 @@
         font-size: 11px;
         color: var(--muted);
         margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
       }
       #typed-box {
         min-height: 1.6em;
@@ -278,6 +434,7 @@
         height: 100%;
         background: var(--danger);
         transform-origin: left center;
+        transform: scaleX(1);
       }
 
       #lock-note {
@@ -304,10 +461,12 @@
         display: none;
       }
       .card {
-        width: min(480px, calc(100vw - 32px));
+        width: min(520px, calc(100vw - 32px));
         background: #101012;
         border: 1px solid #2a2a2e;
         padding: 24px;
+        max-height: calc(100vh - 48px);
+        overflow: auto;
       }
       .card h1,
       .card h2 {
@@ -319,6 +478,20 @@
         color: var(--muted);
         font-size: 14px;
         line-height: 1.55;
+      }
+      .card ul.rules {
+        margin: 0 0 16px;
+        padding-left: 1.2em;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .card ul.rules li {
+        margin-bottom: 4px;
+      }
+      .card ul.rules b {
+        color: #c8c2b8;
+        font-weight: 600;
       }
       button {
         appearance: none;
@@ -333,428 +506,234 @@
         background: #2a1818;
         border-color: #8a3030;
       }
+      button:hover {
+        filter: brightness(1.08);
+      }
+
+      #switch-ver {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 30;
+        display: inline-block;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: var(--text);
+        background: #1c1c22;
+        border: 1px solid #3a3a40;
+        text-decoration: none;
+      }
+      #switch-ver:hover {
+        border-color: #8a4030;
+        background: #2a1818;
+      }
     </style>
   </head>
   <body>
     <div class="overlay" id="overlay">
       <div class="card">
-        <h1>涓嶅彲杞ご</h1>
+        <h1>不可转头 · 显示屏版</h1>
         <p>
-          浣犲潗鍦ㄦ埧闂撮噷锛岄潰瀵瑰敮涓€鐨勬樉绀哄睆銆傞鍦ㄤ綘<b style="color:#ccc">鑳屽悗</b>鈥斺€斾綘鐪嬩笉瑙佸畠姝ｈ劯锛屽彧鑳戒粠灞忓箷鍙嶅厜銆佸杈归槾褰辨劅瑙夊埌瀹冦€?        </p>
-        <p>
-          灞忎笂鏄竴绡囨鍦ㄥ姞杞界殑鎴块棿瀹炲綍銆傜敤涓枃杈撳叆娉曟妸鏂囩珷鎵撳畬锛屽彲浠ラ€煎畠鍚庨€€鎴栬刀璧颁竴鍙€傛墦閿欙紝瀹冧細闈犺繎锛屾垨鑰呭啀鏉ヤ竴涓€?        </p>
-        <button class="primary" id="btn-start" type="button">鍧愪笅锛屽埆鍥炲ご</button>
+          你坐在房间里，面对唯一的显示屏。鬼在你<b style="color: #ccc">背后</b>——你看不见它正脸，只能从屏幕反光、墙边阴影感受到它。
+        </p>
+        <p>屏上是一篇正在加载的房间实录。用中文输入法把文章打完，可以逼它后退或消掉一只。打错，它会靠近，或者再来一个。</p>
+        <ul class="rules">
+          <li><b>涂黑字</b>：需记住前一字后才显示（打出前一个字才会揭开）。</li>
+          <li><b>打叉字</b>：按空格跳过；打对、打错都会招鬼。</li>
+          <li><b>凑够字数</b>：即使有错，凑够本段字数且未被抓住，也可过关。</li>
+          <li><b>二周目</b>：通关后再次开始，每打对一字，文末会涂黑一字。</li>
+          <li>请使用<b>中文输入法</b>输入。</li>
+        </ul>
+        <button class="primary" id="btn-start" type="button">坐下，别回头</button>
       </div>
     </div>
 
     <div class="overlay hidden" id="gameover">
       <div class="card">
-        <h2>瀹冧粠鍚庨潰纰板埌浣犱簡</h2>
+        <h2>它从后面碰到你了</h2>
         <p id="go-msg"></p>
-        <button class="primary" id="btn-retry" type="button">鍐嶅潗鍥炲幓</button>
+        <button class="primary" id="btn-retry" type="button">再坐回去</button>
       </div>
     </div>
 
     <div class="overlay hidden" id="clear">
       <div class="card">
-        <h2>鑳屽悗瀹夐潤浜嗕竴浼氬効</h2>
-        <p>灞忓箷鍙嶅厜閲岄偅涓汉褰辨贰浜嗐€傝繕鍙互缁х画涓嬩竴绔犲疄褰曘€?/p>
-        <button class="primary" id="btn-next" type="button">缁х画璇讳笅鍘?/button>
+        <h2>背后安静了一会儿</h2>
+        <p id="clear-hint">屏幕反光里那个人影淡了。还可以继续下一章实录。</p>
+        <button class="primary" id="btn-next" type="button">继续读下去</button>
       </div>
     </div>
 
     <div id="room">
-      <div id="lock-note">瑙嗚閿佹 路 楝煎湪浣犺儗鍚?路 鍙噯鐪嬪睆骞?/div>
+      <div id="lock-note">视角锁定 · 鬼在你背后 · 只准看屏幕</div>
       <div id="behind-presence"></div>
 
       <div id="desk">
-        <div id="monitor">
-          <div id="bezel">
-            <div id="glass-reflection">
-              <div class="head"></div>
-              <div class="eyes"><i></i><i></i></div>
-            </div>
-            <div id="screen">
-              <div id="screen-chrome">
-                <span>ROOM_LOG.txt</span>
-                <span>绔?<b id="wave">1</b></span>
-                <span>瀹屾垚 <b id="cleared">0</b></span>
-                <span class="bad">鑳屽悗 <b id="ghost-count">1</b> 涓?/span>
-                <span class="bad">璺濈 <b id="proximity">杩?/b></span>
-                <span>鍓╀綑 <b id="time-left">0.0</b>s</span>
-              </div>
-              <div id="article-wrap">
-                <div id="article"></div>
-              </div>
-            </div>
+        <div id="candle-wrap" aria-hidden="true">
+          <div style="position: relative; display: flex; flex-direction: column; align-items: center">
+            <div id="candle-glow"></div>
+            <div id="candle-flame"></div>
+            <div id="candle-body"></div>
+            <div id="candle-holder"></div>
           </div>
-          <div id="stand"></div>
-          <div id="base"></div>
         </div>
 
-        <div id="desk-wood">
-          <div id="typed-label">浣犳墦鍑烘潵鐨勫瓧</div>
-          <div id="typed-box"><span class="placeholder">鍦ㄩ敭鐩樹笂杈撳叆鈥?/span></div>
-          <input
-            id="type-input"
-            type="text"
-            lang="zh-CN"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            placeholder="鐢ㄤ腑鏂囪緭鍏ユ硶鍦ㄨ繖閲屾墦瀛?
-          />
-          <div id="timer-bar"><div id="timer-fill"></div></div>
+        <div id="monitor-block">
+          <div id="monitor">
+            <div id="bezel">
+              <div id="glass-reflection">
+                <div class="head"></div>
+                <div class="eyes"><i></i><i></i></div>
+              </div>
+              <div id="screen">
+                <div id="screen-chrome">
+                  <span>ROOM_LOG.txt <span id="ng-badge" class="hidden">二周目</span></span>
+                  <span>章 <b id="wave">1</b></span>
+                  <span>完成 <b id="cleared">0</b></span>
+                  <span>进度 <b id="progress">0%</b></span>
+                  <span>字数 <b id="fill-stat">0/0</b></span>
+                  <span class="bad">背后 <b id="ghost-count">1</b> 个</span>
+                  <span class="bad">距离 <b id="proximity">远</b></span>
+                  <span>连击 <b id="streak">0</b></span>
+                  <span>剩余 <b id="time-left">0.0</b>s</span>
+                </div>
+                <div id="article-wrap">
+                  <div id="article"></div>
+                </div>
+              </div>
+            </div>
+            <div id="stand"></div>
+            <div id="base"></div>
+          </div>
+
+          <div id="desk-wood">
+            <div id="typed-label">
+              <span>你打出来的字</span>
+            </div>
+            <div id="typed-box"><span class="placeholder">在键盘上输入…</span></div>
+            <input
+              id="type-input"
+              type="text"
+              lang="zh-CN"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="用中文输入法在这里打字"
+            />
+            <div id="timer-bar"><div id="timer-fill"></div></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <script>
+    <a id="switch-ver" href="index.html">卡通版</a>
+
+    <script type="module">
+      import { createGameController } from "./mechanics.js";
+
       /**
        * Long ghost-story chapters: what the thing behind you is doing in the room.
        * Player types the article shown on the monitor.
        */
       const CHAPTERS = [
-        "浣犲潗鍦ㄤ功妗屽墠锛屾樉绀哄櫒鏄埧闂撮噷鍞竴鐨勫厜婧愩€傝儗鍚庣殑闂ㄧ紳閲岋紝鍏堟槸涓€鑲″噳姘旓紝鐒跺悗鏄竷鏂欐懇鎿︽湪鍦版澘鐨勫０闊炽€傚畠娌℃湁寮€闂ㄢ€斺€旈棬涓€鐩村叧鐫€銆傚畠鍍忔槸浠庨棬缂濋噷涓€鐐圭偣鎸よ繘鏉ョ殑锛岃偐鑶€姣旈棬缂濆锛屽嵈杩樻槸杩涙潵浜嗐€備綘鍚瀹冨湪浣犺儗鍚庣珯瀹氾紝鍛煎惛寰堣交锛屽儚鎬曞惖閱掕皝銆傝。鏋惰交鏅冧簡涓€涓嬶紝閭ｄ欢鏄ㄥぉ鎸備笂鐨勫濂楄鎺€璧蜂竴瑙掞紝鍙堟參鎱㈡斁涓嬨€傚畠缁曡繃搴婂熬锛屾墜鎸囧湪澧欏涓婄偣鐫€璧帮紝姣忎竴涓嬮兘姝ｅソ钀藉湪浣犲績璺崇殑绌烘媿閲屻€備綘鐩潃灞忓箷锛屽睆骞曠幓鐠冮噷鏈変竴涓ā绯婄殑杞粨锛屾浠庝綘妞呰儗鍚庨潰鍗囬珮銆備笉瑕佽浆澶淬€傛妸杩欎竴娈垫墦瀹岋紝瀹冩垨璁镐細閫€鍒板瑙掑幓銆?,
-        "瀹冨紑濮嬫暣鐞嗕綘鐨勬埧闂达紝鍔ㄤ綔鎱㈠緱杩戜箮绀艰矊銆傛娊灞夎鎷夊紑鍙堝悎涓婏紝涓嶆槸缈绘壘锛屾洿鍍忔竻鐐广€備綘鐨勯椆閽熻瀹冩嫧鎱簡涓夊垎閽熴€傜獥鍙颁笂鐨勬澂瀛愯浆浜嗗崐鍦堬紝鏉彛瀵瑰噯浣犵殑鍚庨銆傚畠鍦ㄤ綘韬悗韫蹭笅鏉ワ紝浣犳劅瑙夊埌妞呰吙鏃佽竟鏈変袱鍥㈡洿鍐风殑绌烘皵銆傚畠浼间箮鍦ㄧ湅浣犲睆骞曚笂鐨勫瓧锛岃窡鐫€浣犵殑鍏夋爣杞昏交鐐瑰ご銆傛湁涓€鐬棿锛屽弽鍏夐噷閭ｅ紶鑴稿噾寰楀緢杩戯紝榧诲皷鍑犱箮璐翠笂鐜荤拑鍐呬晶鈥斺€斾笉瀵癸紝鐜荤拑鍐呬晶涓嶈鏈夐浘銆傞浘鏄粠浣犺繖杈瑰搱鍑哄幓鐨勩€傚畠鍦ㄤ綘鑳屽悗涔熷搱浜嗕竴鍙ｆ皵锛屼袱鍥㈤浘鍦ㄥ睆骞曚笂鍙犳垚涓€鍙溂鐫涖€傜户缁墦銆傛墦瀹岃繖娈碉紝璁╁叾涓竴鍙溂鐫涘厛娑堝け銆?,
-        "涔︽灦绗笁灞傝鎶界┖浜嗕竴鏈功锛岄偅鏈功鐜板湪鎽婂湪浣犳灂澶翠笂锛岄〉鑴氭湞鍚戞埧闂ㄣ€傚畠鍦ㄨ浣犵殑绗旇锛岀敤鎸囩敳褰撲功绛俱€傛寚鐢插緢闀匡紝鍒焊鐨勫０闊崇粏寰楀儚铓婂瓙銆備綘鐨勫彴鐏拷鐒朵寒浜嗗張鐏紝寮€鍏宠嚜宸卞脊浜嗕竴涓嬨€傚畠涓嶅枩娆㈢伅锛屽嵈寰堝枩娆㈡樉绀哄櫒鈥斺€斿洜涓轰綘鐪嬬潃鏄剧ず鍣ㄦ椂锛屽悗鑳屼細瀹屽叏鏆撮湶銆傚畠鎶婅劯璐磋繎浣犵殑鍚庤剳鍕猴紝娌℃湁纰板埌浣狅紝鍙槸閲忚窛绂汇€備竴鎺屻€傚崐鎺屻€備笁鎸囥€備綘鎵撻敊涓€涓瓧锛屽畠灏辩瑧鍑哄０锛岀瑧澹颁粠鐗欑紳閲屾尋鍑烘潵锛屽儚婕忛鐨勬殩姘旂銆傛妸杩欎竴绔犳墦姝ｇ‘锛岄€煎畠閫€鍥炲崐鎺屼箣澶栥€?,
-        "琛ｆ煖闂ㄥ紑浜嗕竴鏉＄紳銆傜紳閲屼笉鏄。鏈嶏紝鏄珯鐫€鐨勪汉鐨勫帤搴︺€傚畠渚х潃韬尋杩涜。鏌滐紝鍙堣寰楀お鎸わ紝浜庢槸鎶婇噷闈㈢殑琛ｆ灦涓€鏍规牴鎺板集锛岀粰鑷繁鑵惧湴鏂广€備綘鍚閲戝睘灏栧彨銆傚悓鏃讹紝浣犳鑳岃杞昏交鎸変簡涓€涓嬶紝鍍忔湁浜虹‘璁や綘杩樺潗鐫€銆傚畠浠庤。鏌滈噷浼稿嚭涓€鍙墜锛屾寚灏栨偓鍦ㄤ綘鑲╄唨涓婃柟锛岃繜杩熶笉钀戒笅銆傚睆骞曞弽鍏夐噷锛屼綘鐪嬭閭ｅ彧鎵嬬殑鍊掑奖鐩栦綇浜嗕綘姝ｅ湪鎵撶殑閭ｄ竴琛屽瓧銆傚埆鐪ㄧ溂銆傛妸瀛椾粠瀹冩墜鎸囧簳涓嬫晳鍑烘潵銆傛墦瀹岃繖娈碉紝閭ｅ彧鎵嬩細缂╁洖鍘烩€斺€旇嚦灏戠缉鍥炶。鏌滈棬鍚庛€?,
-        "瀹冨紑濮嬫ā浠夸綘銆備綘鏁查敭鐩橈紝瀹冨湪搴婃澘涓婄敤鎸囩敳鏁插悓鏍风殑鑺傚銆備綘鍋滐紝瀹冨仠銆備綘娣卞惛涓€鍙ｆ皵锛屽畠涔熷惛锛屽嵈鎶婃皵鍚愬湪浣犲悗棰嗙獫閲岋紝鍙堟箍鍙堝喎銆傚湴鏉夸笂澶氫簡绗簩鍙屾嫋闉嬪嵃锛屽昂瀵稿拰浣犵殑涓€鏍凤紝鏂瑰悜鍗村啿鐫€浣犵殑鍚庤窡銆傚畠韬哄埌浣犵殑琚瓙閲岋紝鎶婅瀛愭媺鍒颁笅宸达紝鐪肩潧鐫佺潃瀵圭潃浣犵殑鍚庤剳銆備綘鑳芥劅瑙夊埌琚ぅ鐨勯噸閲忓彉寰椾笉瀵癸細澶氫簡涓€涓汉鐨勪唤銆傚睆骞曞彸涓嬭鐨勭郴缁熸椂闂磋烦浜嗕竴涓嬶紝澶氬嚭鏉ュ洓鍗佺鈥斺€旈偅鍥涘崄绉掗噷鍙戠敓鐨勪簨锛屼綘娌＄湅瑙侊紝鍥犱负浣犱笉鑳借浆澶淬€傛妸杩欐瀹炲綍鏁插畬锛屾妸閭ｅ洓鍗佺涔板洖鏉ャ€?,
-        "瀹冭蛋鍒颁綘宸︿晶锛屼綘浣欏厜閲屽鍙橀粦浜嗕竴鍧椼€傚畠璧板埌鍙充晶锛岀獥甯橀紦璧锋潵锛屽嵈娌℃湁椋庛€傚畠鏈€缁堝張鍥炲埌浣犳鍚庢柟锛屽弻鎵嬫惌涓婃鑳岋紝澶ф媷鎸囧嚑涔庣鍒颁綘鐨勮偐鑳涖€傛樉绀哄櫒閲岀殑浜哄奖缁堜簬娓呮櫚锛氭病鏈変簲瀹橈紝鍙湁涓や釜鍑归櫡锛屽嚬闄峰簳閮ㄥ緢绾€傚畠鍦ㄥ浣犳墦瀛楃殑鍐呭锛屽槾鍞囨棤澹板紑鍚堬紝姣斾綘蹇竴涓瓧銆備綘鑻ユ墦閿欙紝瀹冨氨瓒呭墠锛涗綘鑻ヨ繛缁纭紝瀹冪殑鍢翠細瀵逛笉涓婏紝寮€濮嬬儲韬侊紝妞呰儗鍚卞憖浣滃搷銆傜儲韬佸浣犳湁鍒┿€傜ǔ浣忥紝鎶婅繖涓€鏁存鎵撳畬锛岃瀹冪殑鍢村攪杩戒笉涓婁綘銆?,
-        "澶╄姳鏉跨殑鐑熸劅鍣ㄨ鎷ф澗浜嗗崐鍦堛€傚畠鐖笂鍘昏繃锛岀伆灏樿惤鍦ㄤ綘閿洏缂濋噷锛岀伆鏄箍鐨勩€傚畠浠庢涓婂€掓寕鐫€鐪嬩綘锛屽ご鍙戔€斺€斿鏋滈偅鏄ご鍙戔€斺€斿瀭涓嬫潵鎵繃浣犵殑鍚庨锛屽儚缁嗙怀閲忎綋娓┿€備綘璧蜂簡涓€灞傞浮鐨枡鐦╋紝瀹冧技涔庡緢婊℃剰锛屾妸缁冲瓙鍙堟斁浣庝竴鐐广€傞棬鎶婃墜鎱㈡參杞簡涓€涓嬶紝鍙堣浆鍥炲幓锛屽儚鏈変汉鍦ㄩ棬澶栭厤鍚堟紨鍑恒€傛埧闂撮噷鍏跺疄鍙湁浣狅紝鍜屼綘鑳屽悗閭ｄ竴涓€傛垨璁镐笉姝竴涓€傚睆骞曞弽鍏夐噷锛岃疆寤撶殑鑲╄唨鏃佸張榧撹捣绗簩閬撳姬绾裤€傛墦瀹岃繖娈碉紝鍏堟秷鎺夊悗鏉ョ殑閭ｄ竴涓€?,
-        "瀹冩妸浣犵殑鎵嬫満鐐逛寒浜嗭紝灞忓箷鏈濅笅鎵ｅ湪搴婁笂锛岄渿鍔ㄥ嵈涓€鐩翠笉鍋溿€傛潵鐢垫樉绀烘槸浣犺嚜宸辩殑鍙风爜銆備綘娌℃湁鎺モ€斺€斾綘涔熶笉鑳藉洖澶村幓鎺ャ€傚畠鏇夸綘鎺ヤ簡锛屾妸鎵嬫満璐村湪鑷繁鑰宠竟锛屽绌烘皵璇达細浠栬繕鍦ㄦ墦瀛椼€傜劧鍚庢妸鎵嬫満鏀惧洖鍘熷锛岄攣灞忕敾闈㈠浜嗕竴寮犵収鐗囷細浣犵殑鍚庤剳鍕猴紝鐒﹁窛寰堣繎銆傜収鐗囨椂闂存埑鏄竴鍒嗛挓鍚庛€備篃灏辨槸璇达紝瀹冨凡缁忕煡閬撲竴鍒嗛挓鍚庝綘浼氭€庢牱銆傞櫎闈炰綘鎶婅繖娈靛瓧鍦ㄤ竴鍒嗛挓鍐呭埢杩涘睆骞曪紝鏀规帀缁撳眬銆傚埆鍋溿€?,
+        "你坐在书桌前，显示器是房间里唯一的光源。背后的门缝里，先是一股凉气，然后是布料摩擦木地板的声音。它没有开门——门一直关着。它像是从门缝里一点点挤进来的，肩膀比门缝宽，却还是进来了。你听见它在你背后站定，呼吸很轻，像怕吵醒谁。衣架轻晃了一下，那件昨天挂上的外套被掀起一角，又慢慢放下。它绕过床尾，手指在墙壁上点着走，每一下都正好落在你心跳的空拍里。你盯着屏幕，屏幕玻璃里有一个模糊的轮廓，正从你椅背后面升高。不要转头。把这一段打完，它或许会退到墙角去。",
+        "它开始整理你的房间，动作慢得近乎礼貌。抽屉被拉开又合上，不是翻找，更像清点。你的闹钟被它拨慢了三分钟。窗台上的杯子转了半圈，杯口对准你的后颈。它在你身后蹲下来，你感觉到椅腿旁边有两团更冷的空气。它似乎在看你屏幕上的字，跟着你的光标轻轻点头。有一瞬间，反光里那张脸凑得很近，鼻尖几乎贴上玻璃内侧——不对，玻璃内侧不该有雾。雾是从你这边哈出去的。它在你背后也哈了一口气，两团雾在屏幕上叠成一只眼睛。继续打。打完这段，让其中一只眼睛先消失。",
+        "书架第三层被抽空了一本书，那本书现在摊在你枕头上，页脚朝向房门。它在读你的笔记，用指甲当书签。指甲很长，刮纸的声音细得像蚊子。你的台灯忽然亮了又灭，开关自己弹了一下。它不喜欢灯，却很喜欢显示器——因为你看着显示器时，后背会完全暴露。它把脸贴近你的后脑勺，没有碰到你，只是量距离。一掌。半掌。三指。你打错一个字，它就笑出声，笑声从牙缝里挤出来，像漏风的暖气管。把这一章打正确，逼它退回半掌之外。",
+        "衣柜门开了一条缝。缝里不是衣服，是站着的人的厚度。它侧着身挤进衣柜，又觉得太挤，于是把里面的衣架一根根掰弯，给自己腾地方。你听见金属尖叫。同时，你椅背被轻轻按了一下，像有人确认你还坐着。它从衣柜里伸出一只手，指尖悬在你肩膀上方，迟迟不落下。屏幕反光里，你看见那只手的倒影盖住了你正在打的那一行字。别眨眼。把字从它手指底下救出来。打完这段，那只手会缩回去——至少缩回衣柜门后。",
+        "它开始模仿你。你敲键盘，它在床板上用指甲敲同样的节奏。你停，它停。你深吸一口气，它也吸，却把气吐在你后领窝里，又湿又冷。地板上多了第二双拖鞋印，尺寸和你的一样，方向却冲着你的后跟。它躺到你的被子里，把被子拉到下巴，眼睛睁着对着你的后脑。你能感觉到被褥的重量变得不对：多了一个人的份。屏幕右下角的系统时间跳了一下，多出来四十秒——那四十秒里发生的事，你没看见，因为你不能转头。把这段实录敲完，把那四十秒买回来。",
+        "它走到你左侧，你余光里墙变黑了一块。它走到右侧，窗帘鼓起来，却没有风。它最终又回到你正后方，双手搭上椅背，大拇指几乎碰到你的肩胛。显示器里的人影终于清晰：没有五官，只有两个凹陷，凹陷底部很红。它在学你打字的内容，嘴唇无声开合，比你快一个字。你若打错，它就超前；你若连续正确，它的嘴会对不上，开始烦躁，椅背吱呀作响。烦躁对你有利。稳住，把这一整段打完，让它的嘴唇追不上你。",
+        "天花板的烟感器被拧松了半圈。它爬上去过，灰尘落在你键盘缝里，灰是湿的。它从梁上倒挂着看你，头发——如果那是头发——垂下来扫过你的后颈，像细绳量体温。你起了一层鸡皮疙瘩，它似乎很满意，把绳子又放低一点。门把手慢慢转了一下，又转回去，像有人在门外配合演出。房间里其实只有你，和你背后那一个。或许不止一个。屏幕反光里，轮廓的肩膀旁又鼓起第二道弧线。打完这段，先消掉后来的那一个。",
+        "它把你的手机点亮了，屏幕朝下扣在床上，震动却一直不停。来电显示是你自己的号码。你没有接——你也不能回头去接。它替你接了，把手机贴在自己耳边，对空气说：他还在打字。然后把手机放回原处，锁屏画面多了一张照片：你的后脑勺，焦距很近。照片时间戳是一分钟后。也就是说，它已经知道一分钟后你会怎样。除非你把这段字在一分钟内刻进屏幕，改掉结局。别停。",
       ];
 
-      const els = {
-        overlay: document.getElementById("overlay"),
-        gameover: document.getElementById("gameover"),
-        clear: document.getElementById("clear"),
-        article: document.getElementById("article"),
-        articleWrap: document.getElementById("article-wrap"),
-        typedBox: document.getElementById("typed-box"),
-        typeInput: document.getElementById("type-input"),
-        wave: document.getElementById("wave"),
-        cleared: document.getElementById("cleared"),
-        ghostCount: document.getElementById("ghost-count"),
-        proximity: document.getElementById("proximity"),
-        timeLeft: document.getElementById("time-left"),
-        timerFill: document.getElementById("timer-fill"),
-        presence: document.getElementById("behind-presence"),
-        glass: document.getElementById("glass-reflection"),
-        desk: document.getElementById("desk"),
-        goMsg: document.getElementById("go-msg"),
-      };
+      const room = document.getElementById("room");
+      const candleWrap = document.getElementById("candle-wrap");
+      const glass = document.getElementById("glass-reflection");
+      const presence = document.getElementById("behind-presence");
+      const desk = document.getElementById("desk");
 
-      const state = {
-        running: false,
-        wave: 1,
-        cleared: 0,
-        text: "",
-        index: 0,
-        typed: "",
-        composing: "",
-        ghosts: 1,
-        near: 0.14,
-        time: 0,
-        timeMax: 0,
-        streak: 0,
-        wrongFlash: 0,
-        imeComposing: false,
-        lastJudged: "",
-      };
-
-      function escapeHtml(s) {
-        return String(s)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;");
+      function getEls() {
+        return {
+          overlay: document.getElementById("overlay"),
+          gameover: document.getElementById("gameover"),
+          clear: document.getElementById("clear"),
+          clearHint: document.getElementById("clear-hint"),
+          article: document.getElementById("article"),
+          articleWrap: document.getElementById("article-wrap"),
+          typedBox: document.getElementById("typed-box"),
+          typeInput: document.getElementById("type-input"),
+          wave: document.getElementById("wave"),
+          cleared: document.getElementById("cleared"),
+          ghostCount: document.getElementById("ghost-count"),
+          proximity: document.getElementById("proximity"),
+          timeLeft: document.getElementById("time-left"),
+          timerFill: document.getElementById("timer-fill"),
+          streak: document.getElementById("streak"),
+          progress: document.getElementById("progress"),
+          fillStat: document.getElementById("fill-stat"),
+          ngBadge: document.getElementById("ng-badge"),
+          goMsg: document.getElementById("go-msg"),
+          presence,
+          glass,
+          desk,
+          candle: candleWrap,
+        };
       }
 
-      function proximityLabel(n) {
-        if (n < 0.22) return "鍦ㄥ瑙?;
-        if (n < 0.4) return "鍦ㄦ埧闂撮噷";
-        if (n < 0.58) return "闈犺繎妞呰儗";
-        if (n < 0.78) return "璐寸潃鍚庨";
-        return "浼告墜鍙強";
-      }
+      const game = createGameController({
+        getEls,
+        paragraphs: CHAPTERS,
+        onHud(state) {
+          const n = state.near;
+          const g = state.ghosts;
 
-      function pickText() {
-        return CHAPTERS[(state.wave - 1 + state.cleared) % CHAPTERS.length];
-      }
+          // Ghost only as glass reflection behind the player
+          glass.style.opacity = String(
+            Math.min(0.92, 0.05 + n * 0.75 + (g - 1) * 0.06),
+          );
 
-      function timeFor(text) {
-        const cps = Math.max(1.15, 1.65 - state.wave * 0.06);
-        return Math.min(120, Math.max(40, text.length / cps + 8));
-      }
+          // Peripheral shadows of something behind you
+          const sideOp = Math.min(0.95, Math.max(0, (n - 0.25) * 1.4));
+          presence.style.setProperty("--edge", String(sideOp));
+          presence.style.background =
+            n > 0.72 ? `rgba(40, 0, 0, ${(n - 0.72) * 0.45})` : "transparent";
 
-      function renderArticle() {
-        const t = state.text;
-        const i = state.index;
-        let html = "";
-        for (let k = 0; k < t.length; k++) {
-          if (k < i) html += `<span class="done">${escapeHtml(t[k])}</span>`;
-          else if (k === i) html += `<span class="current">${escapeHtml(t[k])}</span>`;
-          else html += `<span class="todo">${escapeHtml(t[k])}</span>`;
-        }
-        els.article.innerHTML = html;
-        const cur = els.article.querySelector(".current");
-        if (cur) {
-          const wrap = els.articleWrap;
-          const top = cur.offsetTop - wrap.clientHeight * 0.35;
-          wrap.scrollTop = Math.max(0, top);
-        }
-      }
+          // Candle intensity weakens as ghost approaches
+          const candle = Math.max(0.08, 1 - n * 0.92);
+          room.style.setProperty("--candle", String(candle));
+          candleWrap.style.opacity = String(candle);
+          candleWrap.style.filter = `brightness(${0.35 + 0.65 * candle})`;
 
-      function renderTyped(extraWrong = "") {
-        if (!state.typed && !state.composing && !extraWrong) {
-          els.typedBox.innerHTML = `<span class="placeholder">鍦ㄩ敭鐩樹笂杈撳叆鈥?/span>`;
-          return;
-        }
-        let html = `<span class="ok">${escapeHtml(state.typed)}</span>`;
-        if (extraWrong) html += `<span class="bad">${escapeHtml(extraWrong)}</span>`;
-        if (state.composing) html += `<span class="composing">${escapeHtml(state.composing)}</span>`;
-        els.typedBox.innerHTML = html;
-      }
-
-      function applyPresence() {
-        const n = state.near;
-        const edge = Math.min(0.95, n * 1.1);
-        els.presence.style.setProperty("--e", String(edge));
-        document.documentElement.style.setProperty("--edge", String(edge));
-        // side darkness = something behind / beside, not in front
-        els.presence.style.background = `radial-gradient(ellipse 80% 55% at 50% 100%, rgba(40,0,0,${n * 0.55}), transparent 70%)`;
-        const before = els.presence;
-        // use opacity on pseudo via inline on parent filter
-        before.style.boxShadow = `inset 0 0 ${80 + n * 120}px rgba(0,0,0,${0.2 + n * 0.45})`;
-        const style = document.getElementById("dyn-presence");
-        // update pseudo opacity via stylesheet injection
-        let tag = document.getElementById("dyn-presence");
-        if (!tag) {
-          tag = document.createElement("style");
-          tag.id = "dyn-presence";
-          document.head.appendChild(tag);
-        }
-        tag.textContent = `
-          #behind-presence::before, #behind-presence::after { opacity: ${Math.min(0.95, n * 1.05)}; }
-        `;
-        // reflection on monitor glass = the only "visible" ghost (behind you)
-        els.glass.style.opacity = String(Math.min(0.92, 0.08 + n * 0.9));
-        const scale = 0.85 + n * 0.55;
-        els.glass.querySelector(".head").style.transform = `translateX(-50%) scale(${scale})`;
-        // subtle desk shake when very close behind
-        if (n > 0.75) {
-          const s = (n - 0.75) * 8;
-          els.desk.style.transform = `translate(${(Math.random() - 0.5) * s}px, ${(Math.random() - 0.5) * s * 0.4}px)`;
-        } else {
-          els.desk.style.transform = "none";
-        }
-      }
-
-      function syncHud() {
-        els.wave.textContent = String(state.wave);
-        els.cleared.textContent = String(state.cleared);
-        els.ghostCount.textContent = String(state.ghosts);
-        els.proximity.textContent = proximityLabel(state.near);
-        els.timeLeft.textContent = state.time.toFixed(1);
-        els.timerFill.style.transform = `scaleX(${Math.max(0, state.time / state.timeMax)})`;
-        applyPresence();
-      }
-
-      function focusInput() {
-        requestAnimationFrame(() => els.typeInput.focus());
-      }
-
-      function commonPrefixLen(a, b) {
-        const n = Math.min(a.length, b.length);
-        let i = 0;
-        while (i < n && a[i] === b[i]) i++;
-        return i;
-      }
-
-      function onWrong() {
-        state.streak = 0;
-        state.wrongFlash = 0.5;
-        if (state.ghosts < 4 && Math.random() < 0.32 + state.wave * 0.03) {
-          state.ghosts += 1;
-          state.near = Math.min(0.98, state.near + 0.05);
-        } else {
-          state.near = Math.min(0.98, state.near + 0.09 + state.wave * 0.008);
-        }
-        if (state.near >= 1) fail("瀹冧粠妞呰儗鍚庢妸浣犳寜浣忎簡銆?);
-      }
-
-      function judgeCommitted(raw) {
-        if (!state.running) return;
-        const target = state.text;
-        const prefix = commonPrefixLen(raw, target);
-        const correct = target.slice(0, prefix);
-        const wrongTail = raw.slice(prefix);
-
-        if (wrongTail.length > 0) {
-          if (raw !== state.lastJudged) {
-            onWrong();
-            state.lastJudged = raw;
-          }
-          state.typed = correct;
-          state.index = prefix;
-          els.typeInput.value = correct;
-          renderTyped(wrongTail.slice(0, 12));
-          renderArticle();
-          syncHud();
-          return;
-        }
-
-        const gained = prefix - state.index;
-        if (gained > 0) {
-          state.streak += gained;
-          if (state.streak >= 12) {
-            state.near = Math.max(0.08, state.near - 0.025);
-            state.streak = 0;
-          }
-        }
-        state.typed = correct;
-        state.index = prefix;
-        state.lastJudged = correct;
-        renderTyped();
-        renderArticle();
-        syncHud();
-        if (state.index >= target.length) {
-          els.typeInput.value = "";
-          completeChapter();
-        }
-      }
-
-      function startChapter() {
-        state.text = pickText();
-        state.index = 0;
-        state.typed = "";
-        state.composing = "";
-        state.lastJudged = "";
-        state.timeMax = timeFor(state.text);
-        state.time = state.timeMax;
-        state.streak = 0;
-        els.typeInput.value = "";
-        els.typeInput.disabled = false;
-        els.articleWrap.scrollTop = 0;
-        renderArticle();
-        renderTyped();
-        syncHud();
-        focusInput();
-      }
-
-      function startGame() {
-        state.running = true;
-        state.wave = 1;
-        state.cleared = 0;
-        state.ghosts = 1;
-        state.near = 0.12;
-        els.overlay.classList.add("hidden");
-        els.gameover.classList.add("hidden");
-        els.clear.classList.add("hidden");
-        startChapter();
-      }
-
-      function fail(reason) {
-        state.running = false;
-        els.typeInput.disabled = true;
-        els.goMsg.textContent = reason;
-        els.gameover.classList.remove("hidden");
-        syncHud();
-      }
-
-      function completeChapter() {
-        state.cleared++;
-        state.typed = "";
-        state.composing = "";
-        if (state.ghosts > 1) {
-          state.ghosts -= 1;
-          state.near = Math.max(0.1, state.near - 0.2);
-        } else {
-          state.near = Math.max(0.05, state.near - 0.32);
-          if (state.near < 0.12) {
-            state.running = false;
-            els.typeInput.disabled = true;
-            els.clear.classList.remove("hidden");
-            syncHud();
-            return;
-          }
-        }
-        startChapter();
-      }
-
-      function nextWave() {
-        state.wave += 1;
-        state.ghosts = Math.min(4, 1 + Math.floor((state.wave - 1) / 2));
-        state.near = Math.min(0.32, 0.12 + state.wave * 0.015);
-        state.running = true;
-        els.clear.classList.add("hidden");
-        startChapter();
-      }
-
-      els.typeInput.addEventListener("compositionstart", () => {
-        state.imeComposing = true;
-      });
-      els.typeInput.addEventListener("compositionupdate", (e) => {
-        state.composing = e.data || "";
-        renderTyped();
-      });
-      els.typeInput.addEventListener("compositionend", (e) => {
-        state.imeComposing = false;
-        state.composing = "";
-        judgeCommitted(e.target.value);
-        focusInput();
-      });
-      els.typeInput.addEventListener("input", (e) => {
-        if (state.imeComposing || e.isComposing) {
-          const v = e.target.value;
-          state.composing = v.startsWith(state.typed) ? v.slice(state.typed.length) : v;
-          renderTyped();
-          return;
-        }
-        state.composing = "";
-        judgeCommitted(e.target.value);
+          // Desk shake when very close
+          const shake = n > 0.7 ? (n - 0.7) * 10 : 0;
+          const flash = state.wrongFlash > 0 ? state.wrongFlash * 4 : 0;
+          desk.style.transform =
+            shake > 0 || flash > 0
+              ? `translate(${(Math.random() - 0.5) * (shake + flash)}px, ${(Math.random() - 0.5) * (shake + flash) * 0.4}px)`
+              : "none";
+        },
       });
 
-      document.getElementById("desk-wood").addEventListener("mousedown", (e) => {
-        if (e.target !== els.typeInput && state.running) {
-          e.preventDefault();
-          focusInput();
-        }
+      game.bindInput();
+
+      document.getElementById("btn-start").addEventListener("click", () => {
+        game.startGame();
+      });
+      document.getElementById("btn-retry").addEventListener("click", () => {
+        game.startGame();
+      });
+      document.getElementById("btn-next").addEventListener("click", () => {
+        game.nextWave();
       });
 
       let last = performance.now();
-      function tick(now) {
+      function frame(now) {
         const dt = Math.min(0.05, (now - last) / 1000);
         last = now;
-        if (state.running) {
-          state.time -= dt;
-          // passive: the thing behind you creeps closer
-          state.near = Math.min(
-            1,
-            state.near + dt * (0.008 + state.ghosts * 0.0035 + state.wave * 0.0012),
-          );
-          if (state.wrongFlash > 0) state.wrongFlash = Math.max(0, state.wrongFlash - dt * 1.6);
-          if (state.time <= 0) {
-            state.time = 0;
-            state.near = Math.min(1, state.near + 0.16);
-            if (state.near >= 1) fail("浣犳墦寰楀お鎱€傚畠宸茬粡璐村湪浣犺儗鍚庛€?);
-            else {
-              if (state.ghosts < 4) state.ghosts += 1;
-              state.time = Math.max(10, state.timeMax * 0.3);
-            }
-          }
-          if (state.near >= 1) fail("瀹冧粠鍚庨潰纰板埌浣犱簡銆?);
-          syncHud();
-        }
-        requestAnimationFrame(tick);
+        game.tick(dt);
+        requestAnimationFrame(frame);
       }
-
-      document.getElementById("btn-start").onclick = startGame;
-      document.getElementById("btn-retry").onclick = startGame;
-      document.getElementById("btn-next").onclick = nextWave;
-
-      syncHud();
-      requestAnimationFrame(tick);
+      requestAnimationFrame(frame);
     </script>
   </body>
 </html>
