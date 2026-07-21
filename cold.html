@@ -32,6 +32,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
         padding: 8px 8px 20px;
         user-select: none;
       }
@@ -177,8 +178,6 @@
         position: relative;
         width: 100%;
         height: 100%;
-        perspective: 900px;
-        perspective-origin: 50% 75%;
         overflow: hidden;
         border-radius: 18px;
         background:
@@ -188,20 +187,23 @@
       }
       .look-cam {
         position: absolute;
-        inset: 3% 5% 2%;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         transform-style: preserve-3d;
-        transform-origin: 50% 90%;
-        will-change: transform;
+        transform-origin: 50% 50%;
       }
       .phone-wrap {
-        position: absolute;
-        left: 50%;
-        top: 0;
+        position: relative;
+        left: auto;
+        top: auto;
         width: 94%;
-        height: 100%;
-        transform: translateX(-50%);
+        height: 96%;
+        margin: 0 auto;
+        transform: none;
         transform-style: preserve-3d;
-        transform-origin: 50% 100%;
+        transform-origin: 50% 50%;
       }
       #fx {
         position: absolute;
@@ -971,17 +973,11 @@
         fx._box = { left: r.left, top: r.top, w, h };
       }
 
-      /** 轻微转头，手机仍铺满屏 */
-      function applyLook(state) {
-        const yaw = state.aimX * -10;
-        const pitch = 4 + state.aimY * 8;
-        const roll = state.aimX * 1.5;
-        lookCam.style.transform =
-          `rotateX(${pitch}deg) rotateY(${yaw}deg) rotateZ(${roll}deg)`;
+      /** 手机固定居中；鼠标只改瞄准抛物线，不挪手机 */
+      function applyLook(_state) {
+        lookCam.style.transform = "none";
         const wrap = document.getElementById("phone-wrap");
-        if (wrap) {
-          wrap.style.transform = `translateX(${state.aimX * -2}%) translateY(${state.aimY * 1.5}%)`;
-        }
+        if (wrap) wrap.style.transform = "none";
       }
 
       function buildKeyboard() {
