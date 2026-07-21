@@ -475,6 +475,7 @@ export function createColdGame(ui) {
     state.nextSneezeBig = peekSneezeBig();
     clearStains();
     ui.onPhase?.(state);
+    ui.onBubbles?.(state);
   }
 
   function startPlay() {

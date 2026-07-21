@@ -239,12 +239,18 @@
         display: flex;
         flex-direction: column;
       }
-      .screen.practice-empty .chat,
       .screen.practice-empty .chat-tools,
       .screen.practice-empty .reveal-line,
       .screen.practice-empty .compose,
       .screen.practice-empty .pay-tiers {
         display: none;
+      }
+      .screen.practice-empty .chat {
+        display: flex;
+        opacity: 0.85;
+      }
+      .screen.practice-empty .voice-bar {
+        pointer-events: none;
       }
       .screen.practice-empty .kb-wrap {
         flex: 1;
@@ -1225,15 +1231,14 @@
         box.querySelectorAll(".voice-bar[data-i]").forEach((b) => {
           const i = +b.dataset.i;
           b.classList.toggle("done", !!state.unlocked[i]);
-          b.classList.toggle("next", i === next);
-          b.disabled = next >= 0 && i > next;
+          b.classList.toggle("next", state.phase === "play" && i === next);
+          b.disabled = state.phase !== "play" || (next >= 0 && i > next);
           const hint = b.querySelector(".hint");
           if (hint) {
-            hint.textContent = state.unlocked[i]
-              ? "重听"
-              : i === next
-                ? "点我"
-                : "锁定";
+            if (state.phase !== "play") hint.textContent = "练习后可点";
+            else if (state.unlocked[i]) hint.textContent = "重听";
+            else if (i === next) hint.textContent = "点我";
+            else hint.textContent = "锁定";
           }
         });
       }
